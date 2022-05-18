@@ -1,0 +1,416 @@
+#include <16F877A.h>
+#fuses XT, NOWDT, NOPROTECT, NOLVP, PUT, NOBROWNOUT // Opciones de configuración
+#use delay(clock=4000000)  //Reloj de 4MHz
+
+////////// Tipo de entradas y salidas (predefinidas con TRIS) ///////////
+
+#use fast_io(a)
+#use fast_io(b)
+#use fast_io(c)
+#use fast_io(d)
+
+#use rs232(baud=9600, xmit=PIN_C6, rcv=PIN_C7, enable=PIN_C5) // Comunicacion serial
+
+////////// Nombres para las entradas para el sistema de buses //////// En total son 60 --> desde 62(>) a 122(z)
+//////////////////////////////Corresponde a MODULO NUMERO 1//////////////////////////////////////////
+#define LUZ0 62
+#define LUZ1 63
+#define LUZ2 64
+#define LUZ3 65
+#define LUZ4 66
+#define LUZ5 67
+#define LUZ6 68
+#define LUZ7 69
+#define LUZ8 70
+#define LUZ9 71
+#define LUZ10 72
+#define LUZ11 73
+#define TODOS 35 // (#) Para todos los consumos 
+#define SERVICIOS 36 // ($) 
+#define ALTERNA 38 // (&)
+
+
+
+////////// Nombres para las entradas ////////
+#define IN1 PIN_D1
+#define IN2 PIN_D0
+#define IN3 PIN_C3
+#define IN4 PIN_C2
+#define IN5 PIN_C1
+#define IN6 PIN_C0
+#define IN7 PIN_D6
+#define IN8 PIN_D5
+#define IN9 PIN_D4
+#define IN10 PIN_C4
+#define IN11 PIN_D3
+#define IN12 PIN_D2
+
+////////// Nombres para las salidas ////////
+#define OUT1 PIN_B1
+#define OUT2 PIN_B2
+#define OUT3 PIN_B3 
+#define OUT4 PIN_B4
+#define OUT5 PIN_B5
+#define OUT6 PIN_B6
+#define OUT7 PIN_B7
+#define OUT8 PIN_A0
+#define OUT9 PIN_A1
+#define OUT10 PIN_A2
+#define OUT11 PIN_E0
+#define OUT12 PIN_A5
+
+////////// Nombres para entradas analogicas del ADC ////////
+#define ANA1 PIN_A5
+#define ANA2 PIN_E0
+#define ANA3 PIN_E1
+#define ANA4 PIN_E2
+
+////////// Otros nombres ///////////////
+#define LED PIN_D7 // Piloto led del modulo
+#define LEDON output_low(LED)     /// Comando rapido para el encendido y 
+#define LEDOFF output_high(LED)   /// apagado del piloto LED.
+#define CruX PIN_B0 // Entrada de cruce por cero
+
+////////// Encabezado de funciones ///////////////
+void Cruce(); // Funcion de cruce por 0 que reinicia el timer
+void Comunica(); // Funcion de lectura de puerto serial y armado del comando
+void Entradas(); // Funcion de lectura de las entradas
+void Analogicos(); // Funcion de toma de valores analogicos
+void Salidas(); // Funcion de Salida de luces
+
+
+////////// Variables Globales ///////////////
+int Comando[4]; // Carga de EVENTO y VALOR
+int LuzIntensidad[12]; // Arreglo de configuracion de luces
+short LuzEstado[12]; // Arreglo de Estado de luces
+short TeclaEstado[12]; // Arreglo de Estado de las teclas
+//int EstadoAlarma; // Variable de control de estado de la alarma/casandra
+long Tpo; // Valor del timer1
+int i=0; // Contador multiproposito
+int j=0; // Contador multiproposito
+long ii=0; // Contador largo multiproposito
+
+void main(){
+
+set_tris_a(0b00001011);  // Puerto A como salidas, menos A0, A1 y A3 que son entradas analogicas.
+set_tris_b(0b00000001);  // Puerto B, todas salidas, menos B0 que es el cruce por cero
+set_tris_c(0b10011111);  // Puerto C, de 0 a 4 -> entradas; 5 y 6 para RS232 salidas; C7 es RX -> Entrada
+set_tris_d(0b01111111);  // Puerto D, todas entradas menos el Piloto (D7)
+
+setup_adc_ports(RA0_RA1_Ra3_ANALOG);  // Entradas analogicas.
+setup_adc(ADC_CLOCK_INTERNAL);  // Barrido ¿Hace falta?
+
+setup_timer_1(T1_INTERNAL | T1_DIV_BY_1);
+enable_interrupts(global);
+//disable_interrupts(global);
+enable_interrupts(int_ext);
+
+delay_ms(500);
+output_high(OUT6);
+delay_ms(500);
+output_low(OUT6);
+delay_ms(500);
+output_high(OUT6);
+delay_ms(500);
+output_low(OUT6);
+delay_ms(500);
+output_high(OUT6);
+delay_ms(500);
+output_low(OUT6);
+
+
+while (1){
+
+if (j) Salidas();  // Actuamos
+else{
+Comunica(); // Leemos bus de datos
+Entradas(); // Leemos entradas
+}
+++j;
+/*
+Salidas();
+Comunica(); // Leemos bus de datos
+Entradas(); // Leemos entradas
+*/
+
+} // while 1
+
+} // main
+
+
+#int_ext
+void Cruce(){
+set_timer1(0);
+}
+
+void Comunica(){  /// CODIFICACION: 48 (0) .. 57 (9)
+                  ///               65 (A) .. 74 (J)
+                  ///               77 (M) .. 86 (V)
+                  ///                           88X
+                  ///                           90Z
+while (kbhit()){
+Comando[i]=getc();
+//delay_ms(3000);
+//printf("Comando --> %c%c%c%c%c",Comando[0], Comando[1], Comando[2], Comando[3], Comando[4]);
+
+if (Comando[i]==60) {
+i=0;
+}else{
+Comando[i]=getc();
+i++;
+}
+if (i>=2){
+i=0;
+if (((Comando[0])+(Comando[1])) == Comando[2]){ // Prueba de checksum
+
+switch (Comando[0]){
+
+Case LUZ0:
+   LuzIntensidad[0]=Comando[1]; // Valor de Dia
+break;
+
+Case LUZ1:
+   LuzIntensidad[1]=Comando[1]; // Valor de Dia
+break;
+
+Case LUZ2:
+   LuzIntensidad[2]=Comando[1]; // Valor de Dia
+break;
+
+Case LUZ3:
+   LuzIntensidad[3]=Comando[1]; // Valor de Dia
+break;
+
+Case LUZ4:
+   LuzIntensidad[4]=Comando[1]; // Valor de Dia
+break;
+
+Case LUZ5:
+   LuzIntensidad[5]=Comando[1]; // Valor de Dia
+break;
+
+Case LUZ6:
+   LuzIntensidad[6]=Comando[1]; // Valor de Dia
+break;
+
+Case LUZ7:
+   LuzIntensidad[7]=Comando[1]; // Valor de Dia
+break;
+
+Case LUZ8:
+   LuzIntensidad[8]=Comando[1]; // Valor de Dia
+break;
+
+Case LUZ9:
+   LuzIntensidad[9]=Comando[1]; // Valor de Dia
+break;
+
+Case LUZ10:
+   LuzIntensidad[10]=Comando[1]; // Valor de Dia
+break;
+
+Case LUZ11:
+   LuzIntensidad[11]=Comando[1]; // Valor de Dia
+break;
+
+
+Case TODOS:
+//////// Inserte codigo aqui ////////
+break;
+
+Case SERVICIOS:
+//////// Inserte codigo aqui ////////
+break;
+
+Case ALTERNA:
+//////// Inserte codigo aqui ////////
+break;
+
+
+} // Switch
+} // if checksum
+} // if i
+} // while
+} //fn
+
+void Entradas(){
+
+if ( (input(IN1)) ^ TeclaEstado[0] ){  // Si cambia la tecla
+TeclaEstado[0]=input(IN1); // Gurdamos el Cambio
+if ((LuzEstado[0]) == false) {
+printf("%c%c%c%c%c", 60, 60, 62, 126, 60); //PRENDO
+LuzEstado[0]=true;
+} else {
+printf("%c%c%c%c%c", 60, 60, 62, 124, 60); //APAGO
+LuzEstado[0]=false;
+}
+}
+
+if ( (input(IN2)) ^ TeclaEstado[1] ){  // Si cambia la tecla
+TeclaEstado[1]=input(IN2); // Gurdamos el Cambio
+if ((LuzEstado[1]) == false) {
+printf("%c%c%c%c%c", 60, 60, 63, 126, 60); //PRENDO
+LuzEstado[1]=true;
+} else {
+printf("%c%c%c%c%c", 60, 60, 63, 124, 60); //APAGO
+LuzEstado[1]=false;
+}
+}
+
+if ( (input(IN3)) ^ TeclaEstado[2] ){  // Si cambia la tecla
+TeclaEstado[2]=input(IN3); // Gurdamos el Cambio
+if ((LuzEstado[2]) == false) {
+printf("%c%c%c%c%c", 60, 60, 64, 126, 60); //PRENDO
+LuzEstado[2]=true;
+} else {
+printf("%c%c%c%c%c", 60, 60, 64, 124, 60); //APAGO
+LuzEstado[2]=false;
+}
+}
+
+if ( (input(IN4)) ^ TeclaEstado[3] ){  // Si cambia la tecla
+TeclaEstado[3]=input(IN4); // Gurdamos el Cambio
+if ((LuzEstado[3]) == false) {
+printf("%c%c%c%c%c", 60, 60, 65, 126, 60); //PRENDO
+LuzEstado[3]=true;
+} else {
+printf("%c%c%c%c%c", 60, 60, 65, 124, 60); //APAGO
+LuzEstado[3]=false;
+}
+}
+
+if ( (input(IN5)) ^ TeclaEstado[4] ){  // Si cambia la tecla
+TeclaEstado[4]=input(IN5); // Gurdamos el Cambio
+if ((LuzEstado[4]) == false) {
+printf("%c%c%c%c%c", 60, 60, 66, 126, 60); //PRENDO
+LuzEstado[4]=true;
+} else {
+printf("%c%c%c%c%c", 60, 60, 66, 124, 60); //APAGO
+LuzEstado[4]=false;
+}
+}
+
+if ( (input(IN6)) ^ TeclaEstado[5] ){  // Si cambia la tecla
+TeclaEstado[5]=input(IN6); // Gurdamos el Cambio
+if ((LuzEstado[5]) == false) {
+printf("%c%c%c%c%c", 60, 60, 67, 126, 60); //PRENDO
+LuzEstado[5]=true;
+} else {
+printf("%c%c%c%c%c", 60, 60, 67, 124, 60); //APAGO
+LuzEstado[5]=false;
+}
+}
+
+if ( (input(IN7)) ^ TeclaEstado[6] ){  // Si cambia la tecla
+TeclaEstado[6]=input(IN7); // Gurdamos el Cambio
+if ((LuzEstado[6]) == false) {
+printf("%c%c%c%c%c", 60, 60, 68, 126, 60); //PRENDO
+LuzEstado[6]=true;
+} else {
+printf("%c%c%c%c%c", 60, 60, 68, 124, 60); //APAGO
+LuzEstado[6]=false;
+}
+}
+
+if ( (input(IN8)) ^ TeclaEstado[7] ){  // Si cambia la tecla
+TeclaEstado[7]=input(IN8); // Gurdamos el Cambio
+if ((LuzEstado[7]) == false) {
+printf("%c%c%c%c%c", 60, 60, 69, 126, 60); //PRENDO
+LuzEstado[7]=true;
+} else {
+printf("%c%c%c%c%c", 60, 60, 69, 124, 60); //APAGO
+LuzEstado[7]=false;
+}
+}
+
+if ( (input(IN9)) ^ TeclaEstado[8] ){  // Si cambia la tecla
+TeclaEstado[8]=input(IN9); // Gurdamos el Cambio
+if ((LuzEstado[8]) == false) {
+printf("%c%c%c%c%c", 60, 60, 70, 126, 60); //PRENDO
+LuzEstado[8]=true;
+} else {
+printf("%c%c%c%c%c", 60, 60, 70, 124, 60); //APAGO
+LuzEstado[8]=false;
+}
+}
+
+if ( (input(IN10)) ^ TeclaEstado[9] ){  // Si cambia la tecla
+TeclaEstado[9]=input(IN10); // Gurdamos el Cambio
+if ((LuzEstado[9]) == false) {
+printf("%c%c%c%c%c", 60, 60, 71, 126, 60); //PRENDO
+LuzEstado[9]=true;
+} else {
+printf("%c%c%c%c%c", 60, 60, 71, 124, 60); //APAGO
+LuzEstado[9]=false;
+}
+}
+
+if ( (input(IN11)) ^ TeclaEstado[10] ){  // Si cambia la tecla
+TeclaEstado[10]=input(IN11); // Gurdamos el Cambio
+if ((LuzEstado[10]) == false) {
+printf("%c%c%c%c%c", 60, 60, 72, 126, 60); //PRENDO
+LuzEstado[10]=true;
+} else {
+printf("%c%c%c%c%c", 60, 60, 72, 124, 60); //APAGO
+LuzEstado[10]=false;
+}
+}
+
+if ( (input(IN12)) ^ TeclaEstado[11] ){  // Si cambia la tecla
+TeclaEstado[11]=input(IN12); // Gurdamos el Cambio
+if ((LuzEstado[11]) == false) {
+printf("%c%c%c%c%c", 60, 60, 73, 126, 60); //PRENDO
+LuzEstado[11]=true;
+} else {
+printf("%c%c%c%c%c", 60, 60, 73, 124, 60); //APAGO
+LuzEstado[11]=false;
+}
+}
+
+ 
+}
+
+
+
+void Salidas(){
+
+Tpo = get_timer1();
+
+if (LuzEstado[0]){
+switch (EstadoAlarma){
+
+case 0: // Estamos en estado de alarma 0
+
+
+
+break;
+
+
+
+} //switch
+} else output_low(OUT1); //if luzestado  
+
+
+
+
+if (((Tpo > ii) && (Tpo < ii + 500)) || ((Tpo > ii + 10000) && (Tpo < ii + 10500))) {
+output_high(OUT6);
+}
+
+
+if (input(IN1)) ii = 7500;
+if (input(IN2)) ii = 6900;
+if (input(IN3)) ii = 6300;
+if (input(IN4)) ii = 5800;
+if (input(IN5)) ii = 5200;
+if (input(IN6)) ii = 4600;
+if (input(IN7)) ii = 4000;
+if (input(IN8)) ii = 3400;
+if (input(IN9)) ii = 2800;
+if (input(IN10)) ii = 0;
+if (input(IN11)) ii = 0;
+if (input(IN12)) ii = 0;
+
+output_low(OUT6);
+}
+

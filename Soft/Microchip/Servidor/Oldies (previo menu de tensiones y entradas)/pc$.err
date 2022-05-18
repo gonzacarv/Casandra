@@ -1,0 +1,17 @@
+>>> Warning 203 "D:\Dropbox\Gonzalo\Proyecto Casandra\Version final\Soft\Servidor\DS1307.c" Line 18(1,1): Condition always TRUE
+>>> Warning 202 "main.c" Line 33(15,21): Variable never used:   values
+>>> Warning 202 "main.c" Line 37(15,20): Variable never used:   state
+>>> Warning 202 "main.c" Line 42(6,9): Variable never used:   sec
+>>> Warning 202 "main.c" Line 43(6,9): Variable never used:   min
+>>> Warning 202 "main.c" Line 44(6,9): Variable never used:   hrs
+>>> Warning 202 "main.c" Line 45(6,9): Variable never used:   day
+>>> Warning 202 "main.c" Line 46(6,11): Variable never used:   month
+>>> Warning 202 "main.c" Line 47(6,10): Variable never used:   year
+>>> Warning 202 "main.c" Line 48(6,9): Variable never used:   dow
+>>> Warning 202 "main.c" Line 277(5,9): Variable never used:   Menu
+>>> Warning 202 "main.c" Line 278(5,12): Variable never used:   TempMax
+>>> Warning 202 "main.c" Line 279(6,13): Variable never used:   TempMin
+>>> Warning 202 "main.c" Line 280(7,13): Variable never used:   SolMax
+*** Error 53 "main.c" Line 280(16,17): Expecting function name
+      1 Errors,  14 Warnings.
+Build Failed.

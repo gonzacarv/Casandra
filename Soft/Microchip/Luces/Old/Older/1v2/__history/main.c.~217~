@@ -1,0 +1,528 @@
+#include <16F877A.h> // N1
+#fuses XT, NOWDT, NOPROTECT, NOLVP, PUT, NOBROWNOUT // Opciones de configuración
+#use delay(clock=4000000)  //Reloj de 4MHz
+#byte TMR1H = 0xF
+
+////////// Tipo de entradas y salidas (predefinidas con TRIS) ///////////
+
+#use fast_io(a)
+#use fast_io(b)
+#use fast_io(c)
+#use fast_io(d)
+
+#use rs232(baud=9600, xmit=PIN_C6, rcv=PIN_C7, enable=PIN_C5) // Comunicacion serial
+
+//////////////////////////////Corresponde a MODULO NUMERO 1//////////////////////////////////////////
+#define LUZ0 33 // Para modulo 1
+#define LUZ1 34 // Para modulo 1
+#define LUZ2 35 // Para modulo 1
+#define LUZ3 36 // Para modulo 1
+#define LUZ4 37 // Para modulo 1
+#define LUZ5 38 // Para modulo 1
+#define LUZ6 39 // Para modulo 1
+#define LUZ7 40 // Para modulo 1
+#define LUZ8 41 // Para modulo 1
+#define LUZ9 42 // Para modulo 1
+#define LUZ10 43 // Para modulo 1
+#define LUZ11 44 // Para modulo 1
+#define TODOS 100  // Para TODOS
+
+#define RESTA 33 // Para modulo 1
+//#define RESTA 45 // Para modulo 2
+//#define RESTA 57 // Para modulo 3
+//#define RESTA 69 // Para modulo 4
+//#define RESTA 81 // Para modulo 5
+
+////////// Nombres para las entradas ////////
+#define IN1 PIN_D1
+#define IN2 PIN_D0
+#define IN3 PIN_C3
+#define IN4 PIN_C2
+#define IN5 PIN_C1
+#define IN6 PIN_C0
+#define IN7 PIN_D6
+#define IN8 PIN_D5
+#define IN9 PIN_D4
+#define IN10 PIN_C4
+#define IN11 PIN_D3
+#define IN12 PIN_D2
+
+////////// Nombres para las salidas ////////
+#define OUT1 PIN_B1
+#define OUT2 PIN_B2
+#define OUT3 PIN_B3 
+#define OUT4 PIN_B4
+#define OUT5 PIN_B5
+#define OUT6 PIN_B6
+#define OUT7 PIN_B7
+#define OUT8 PIN_A0
+#define OUT9 PIN_A1
+#define OUT10 PIN_A2
+#define OUT11 PIN_E0
+#define OUT12 PIN_A5
+
+////////// Nombres para entradas analogicas del ADC ////////
+#define ANA1 PIN_A5
+#define ANA2 PIN_E0
+#define ANA3 PIN_E1
+#define ANA4 PIN_E2
+
+////////// Otros nombres ///////////////
+#define LED PIN_D7 // Piloto led del modulo
+#define LEDON output_low(LED)     /// Comando rapido para el encendido y 
+#define LEDOFF output_high(LED)   /// apagado del piloto LED.
+#define CruX PIN_B0 // Entrada de cruce por cero
+
+////////// Encabezado de funciones ///////////////
+void Cruce(); // Funcion de cruce por 0 que reinicia el timer
+void Comunica(); // Funcion de lectura de puerto serial y armado del comando
+void Cambio(); // Cambio en la configuracion de alguna luz
+void Entradas(); // Funcion de lectura de las entradas
+void Analogicos(); // Funcion de toma de valores analogicos
+void Accion(); // Funcion de Salida de luces
+void BusData(); // LLego algo al bus de datos
+
+
+////////// Variables Globales ///////////////
+int Comando[4]; // Carga de EVENTO y VALOR
+int LuzIntensidad[12]; // Arreglo de configuracion de luces
+int LuzEstado[12]; // Arreglo de Estado de luces
+short TeclaEstado[12]; // Arreglo de Estado de las teclas
+//int EstadoAlarma; // Variable de control de estado de la alarma/casandra
+long Tpo; // Valor del timer1
+int i=0; // Contador puntero para armar el comando recibido por el bus
+int j=0; // Contador en interrupcion de cruce por cero para tiempos largos
+long ii=0; // Contador largo para armado del dimmer
+
+void main(){
+
+set_tris_a(0b00001011);  // Puerto A como salidas, menos A0, A1 y A3 que son entradas analogicas.
+set_tris_b(0b00000001);  // Puerto B, todas salidas, menos B0 que es el cruce por cero
+set_tris_c(0b10011111);  // Puerto C, de 0 a 4 -> entradas; 5 y 6 para RS232 salidas; C7 es RX -> Entrada
+set_tris_d(0b01111111);  // Puerto D, todas entradas menos el Piloto (D7)
+
+setup_adc_ports(RA0_RA1_Ra3_ANALOG);  // Entradas analogicas.
+setup_adc(ADC_CLOCK_INTERNAL);  // Barrido ¿Hace falta?
+
+setup_timer_1(T1_INTERNAL | T1_DIV_BY_1);
+enable_interrupts(global);
+//disable_interrupts(global);
+enable_interrupts(int_ext);
+enable_interrupts(int_rda);
+
+delay_ms(500);
+LEDON;
+output_high(out6);
+delay_ms(500);
+LEDOFF;
+output_low(out6);
+
+delay_ms(500);
+LEDON;
+output_high(out6);
+delay_ms(500);
+LEDOFF;
+output_low(out6);
+
+delay_ms(500);
+LEDON;
+output_high(out6);
+delay_ms(500);
+LEDOFF;
+output_low(out6);
+
+delay_ms(500);
+LEDON;
+output_high(out6);
+delay_ms(500);
+LEDOFF;
+output_low(out6);
+
+delay_ms(500);
+LEDON;
+output_high(out6);
+delay_ms(500);
+LEDOFF;
+output_low(out6);
+
+delay_ms(500);
+LEDON;
+output_high(out6);
+delay_ms(500);
+LEDOFF;
+output_low(out6);
+
+delay_ms(500);
+LEDON;
+output_high(out6);
+delay_ms(500);
+LEDOFF;
+output_low(out6);
+
+
+while (1){
+
+//Accion();
+//Comunica(); // Leemos bus de datos
+Entradas(); // Leemos entradas
+
+
+} // while 1
+
+} // main
+
+void Comunica(){
+i=TMR1H;
+Accion();
+
+if (( (Comando[0]) + (Comando[1]) ) == Comando[2]){ // Prueba de checksum
+
+if (((Comando[0])-RESTA) < 13) {  // Solo Luces individuales
+
+      if (Comando[1] < 80) LuzIntensidad[(Comando[0]-RESTA)]=Comando[1];
+      else LuzEstado[(Comando[0]-RESTA)]=Comando[1];
+
+Accion();}// If
+
+if ((Comando[0]) == TODOS){ // Para todas las luces
+int Cuenta;
+   for (Cuenta=0;Cuenta<12;Cuenta++){ // llena todo desde el 0 al 11
+
+      if (Comando[1] < 80) LuzIntensidad[Cuenta]=Comando[1];
+      else LuzEstado[Cuenta]=Comando[1];
+
+Accion();} //For
+} // If
+
+} // if checksum
+} //fn
+
+void Entradas() {
+Accion();
+if ( (input(IN1)) ^ TeclaEstado[0] ){  // Si cambia la tecla
+TeclaEstado[0]=input(IN1); // Gurdamos el Cambio
+if ((LuzEstado[0]) != 101) {
+printf("%c%c%c%c%c", 150, 150, LUZ0, 101, LUZ0 + 101); //PRENDO
+LuzEstado[0]=101;
+} else {
+printf("%c%c%c%c%c", 150, 150, LUZ0, 100, LUZ0 + 100); //APAGO
+LuzEstado[0]=100;
+}
+Accion();}
+
+if ( (input(IN2)) ^ TeclaEstado[1] ){  // Si cambia la tecla
+TeclaEstado[1]=input(IN2); // Gurdamos el Cambio
+if ((LuzEstado[1]) != 101) {
+printf("%c%c%c%c%c", 150, 150, LUZ1, 101, LUZ1 + 101); //PRENDO
+LuzEstado[1]=101;
+} else {
+printf("%c%c%c%c%c", 150, 150, LUZ1, 100, LUZ1 + 100); //APAGO
+LuzEstado[1]=100;
+}
+Accion();}
+
+if ( (input(IN3)) ^ TeclaEstado[2] ){  // Si cambia la tecla
+TeclaEstado[2]=input(IN3); // Gurdamos el Cambio
+if ((LuzEstado[2]) != 101) {
+printf("%c%c%c%c%c", 150, 150, LUZ2, 101, LUZ2 + 101); //PRENDO
+LuzEstado[2]=101;
+} else {
+printf("%c%c%c%c%c", 150, 150, LUZ2, 100, LUZ2 + 100); //APAGO
+LuzEstado[2]=100;
+}
+Accion();}
+
+if ( (input(IN4)) ^ TeclaEstado[3] ){  // Si cambia la tecla
+TeclaEstado[3]=input(IN4); // Gurdamos el Cambio
+if ((LuzEstado[3]) != 101) {
+printf("%c%c%c%c%c", 150, 150, LUZ3, 101, LUZ3 + 101); //PRENDO
+LuzEstado[3]=101;
+} else {
+printf("%c%c%c%c%c", 150, 150, LUZ3, 100, LUZ3 + 100); //APAGO
+LuzEstado[3]=100;
+}
+Accion();}
+
+if ( (input(IN5)) ^ TeclaEstado[4] ){  // Si cambia la tecla
+TeclaEstado[4]=input(IN5); // Gurdamos el Cambio
+if ((LuzEstado[4]) != 101) {
+printf("%c%c%c%c%c", 150, 150, LUZ4, 101, LUZ4 + 101); //PRENDO
+LuzEstado[4]=101;
+} else {
+printf("%c%c%c%c%c", 150, 150, LUZ4, 100, LUZ4 + 100); //APAGO
+LuzEstado[4]=100;
+}
+Accion();}
+
+if ( (input(IN6)) ^ TeclaEstado[5] ){  // Si cambia la tecla
+TeclaEstado[5]=input(IN6); // Gurdamos el Cambio
+if ((LuzEstado[5]) != 101) {
+printf("%c%c%c%c%c", 150, 150, LUZ5, 101, LUZ5 + 101); //PRENDO
+LuzEstado[5]=101;
+} else {
+printf("%c%c%c%c%c", 150, 150, LUZ5, 100, LUZ5 + 100); //APAGO
+LuzEstado[5]=100;
+}
+Accion();}
+
+if ( (input(IN7)) ^ TeclaEstado[6] ){  // Si cambia la tecla
+TeclaEstado[6]=input(IN7); // Gurdamos el Cambio
+if ((LuzEstado[6]) != 101) {
+printf("%c%c%c%c%c", 150, 150, LUZ6, 101, LUZ6 + 101); //PRENDO
+LuzEstado[6]=101;
+} else {
+printf("%c%c%c%c%c", 150, 150, LUZ6, 100, LUZ6 + 100); //APAGO
+LuzEstado[6]=100;
+}
+Accion();}
+
+if ( (input(IN8)) ^ TeclaEstado[7] ){  // Si cambia la tecla
+TeclaEstado[7]=input(IN8); // Gurdamos el Cambio
+if ((LuzEstado[7]) != 101) {
+printf("%c%c%c%c%c", 150, 150, LUZ7, 101, LUZ7 + 101); //PRENDO
+LuzEstado[7]=101;
+} else {
+printf("%c%c%c%c%c", 150, 150, LUZ7, 100, LUZ7 + 100); //APAGO
+LuzEstado[7]=100;
+}
+Accion();}
+
+if ( (input(IN9)) ^ TeclaEstado[8] ){  // Si cambia la tecla
+TeclaEstado[8]=input(IN9); // Gurdamos el Cambio
+if ((LuzEstado[8]) != 101) {
+printf("%c%c%c%c%c", 150, 150, LUZ8, 101, LUZ8 + 101); //PRENDO
+LuzEstado[8]=101;
+} else {
+printf("%c%c%c%c%c", 150, 150, LUZ8, 100, LUZ8 + 100); //APAGO
+LuzEstado[8]=100;
+}
+Accion();}
+
+if ( (input(IN10)) ^ TeclaEstado[9] ){  // Si cambia la tecla
+TeclaEstado[9]=input(IN10); // Gurdamos el Cambio
+if ((LuzEstado[9]) != 101) {
+printf("%c%c%c%c%c", 150, 150, LUZ9, 101, LUZ9 + 101); //PRENDO
+LuzEstado[9]=101;
+} else {
+printf("%c%c%c%c%c", 150, 150, LUZ9, 100, LUZ9 + 100); //APAGO
+LuzEstado[9]=100;
+}
+Accion();}
+
+if ( (input(IN11)) ^ TeclaEstado[10] ){  // Si cambia la tecla
+TeclaEstado[10]=input(IN11); // Gurdamos el Cambio
+if ((LuzEstado[10]) != 101) {
+printf("%c%c%c%c%c", 150, 150, LUZ10, 101, LUZ10 + 101); //PRENDO
+LuzEstado[10]=101;
+} else {
+printf("%c%c%c%c%c", 150, 150, LUZ10, 100, LUZ10 + 100); //APAGO
+LuzEstado[10]=100;
+}
+Accion();}
+
+if ( (input(IN12)) ^ TeclaEstado[11] ){  // Si cambia la tecla
+TeclaEstado[11]=input(IN12); // Gurdamos el Cambio
+if ((LuzEstado[11]) != 101) {
+printf("%c%c%c%c%c", 150, 150, LUZ11, 101, LUZ11 + 101); //PRENDO
+LuzEstado[11]=101;
+} else {
+printf("%c%c%c%c%c", 150, 150, LUZ11, 100, LUZ11 + 100); //APAGO
+LuzEstado[11]=100;
+}
+Accion();}
+
+ 
+}
+
+
+void Cambio(){
+// Tpo = get_timer1(); // Traemos el timer (no es un buen momento)
+int Cuenta;
+for (Cuenta=0;Cuenta<12;Cuenta++){ // llena todo desde el 0 al 11
+
+      long ii;
+      if (LuzEstado[Cuenta] == 101) ii = (long) 8100 - ((LuzIntensidad[Cuenta]-50)*600); // Segun intensidad
+      if (LuzEstado[Cuenta] == 102) ii = 0; // MAXIMO
+      if (LuzEstado[Cuenta] == 103) ii = 4600; // MEDIO
+      if (LuzEstado[Cuenta] == 104) ii = 6500; //MINIMO
+
+      if (LuzEstado[Cuenta] == 120){ // ONOFF1 mas lento de todos
+         if (bit_test(j,7)) ii = 0;
+         else ii = 10000;
+      } // If ONOFF 1
+      
+      if (LuzEstado[Cuenta] == 121){ // ONOFF2  normal 
+         if (bit_test(j,6)) ii = 0;
+         else ii = 10000;
+      } // If ONOFF 2
+      
+      if (LuzEstado[Cuenta] == 122){ // ONOFF3 rapido
+         if (bit_test(j,5)) ii = 0;
+         else ii = 10000;
+      } // If ONOFF 3
+
+
+/*  OLAS PENDIENTES DE IMPLEMENTAR
+
+      if (LuzEstado[Cuenta] == 130) ii =// OLA 1 Lentisima
+         if (bit_test(j,7)) ii = 0;
+         else ii = 10000
+
+      
+      if (LuzEstado[Cuenta] == 131){ // OLA 2 normal
+         if (bit_test(j,7)) ii = 0;
+         else ii = 10000
+      } // If ONOFF 1
+      
+      if (LuzEstado[Cuenta] == 132){ // OLA 3 rapida
+         if (bit_test(j,7)) ii = 0;
+         else ii = 10000
+      } // If ONOFF 1
+*/
+
+      if (LuzEstado[Cuenta] == 140){ // Alarma
+         if (bit_test(j,7)) ii = 0;
+         else ii = 10000;
+      } // If ONOFF 1
+
+      Tpo = get_timer1();
+      if (((Tpo > ii) && (Tpo < ii + 500)) || ((Tpo > ii + 10000) && (Tpo < ii + 10500))) {
+      switch (Cuenta){
+        case 0:
+        output_high(OUT1);
+        break;
+      
+        case 1:
+        output_high(OUT2);
+        break;
+      
+        case 2:
+        output_high(OUT3);
+        break;
+      
+        case 3:
+        output_high(OUT4);
+        break;
+      
+        case 4:
+        output_high(OUT5);
+        break;
+      
+        case 5:
+        output_high(OUT6);
+        break;
+      
+        case 6:
+        output_high(OUT7);
+        break;
+      
+        case 7:
+        output_high(OUT8);
+        break;
+      
+        case 8:
+        output_high(OUT9);
+        break;
+      
+        case 9:
+        output_high(OUT10);
+        break;
+      
+        case 10:
+        output_high(OUT11);
+        break;
+
+        case 11:
+        output_high(OUT12);
+        break;
+      
+      } // Switch
+      } else { // IF
+      switch (Cuenta){
+        case 0:
+        output_low(OUT1);
+        break;
+      
+        case 1:
+        output_low(OUT2);
+        break;
+      
+        case 2:
+        output_low(OUT3);
+        break;
+      
+        case 3:
+        output_low(OUT4);
+        break;
+      
+        case 4:
+        output_low(OUT5);
+        break;
+      
+        case 5:
+        output_low(OUT6);
+        break;
+      
+        case 6:
+        output_low(OUT7);
+        break;
+      
+        case 7:
+        output_low(OUT8);
+        break;
+      
+        case 8:
+        output_low(OUT9);
+        break;
+      
+        case 9:
+        output_low(OUT10);
+        break;
+      
+        case 10:
+        output_low(OUT11);
+        break;
+
+        case 11:
+        output_low(OUT12);
+        break;
+      
+      } // Switch
+      } // else
+
+/* INTENSIDADES DE REFERENCIA
+if (input(IN1)) ii = 7500;
+if (input(IN2)) ii = 6900;
+if (input(IN3)) ii = 6300;
+if (input(IN4)) ii = 5800;
+if (input(IN5)) ii = 5200;
+if (input(IN6)) ii = 4600;
+if (input(IN7)) ii = 4000;
+if (input(IN8)) ii = 3400;
+if (input(IN9)) ii = 2800;
+if (input(IN10)) ii = 0;
+if (input(IN11)) ii = 0;
+if (input(IN12)) ii = 0;
+*/
+} // FOR
+} // fn
+ 
+ 
+ 
+ #int_ext
+void Cruce(){
+set_timer1(0);
+++j; // variable de tiempos largos
+Accion();
+}
+
+#int_rda
+void BusData(){
+if (kbhit()){
+Comando[i]=getc();
+if (Comando[i] == 150) i=0;
+else ++i;
+if (i==3) Comunica();
+}
+}
+

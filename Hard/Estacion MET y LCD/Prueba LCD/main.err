@@ -1,0 +1,9 @@
+>>> Warning 203 "D:\Dropbox\Gonzalo\Proyecto Casandra\Estacion MET y LCD\Prueba LCD\DS1307.c" Line 18(1,1): Condition always TRUE
+>>> Warning 203 "main.c" Line 227(1,1): Condition always TRUE
+>>> Warning 216 "main.c" Line 3621(1,2): Interrupts disabled during call to prevent re-entrancy:  (@delay_ms1)
+>>> Warning 216 "main.c" Line 3621(1,2): Interrupts disabled during call to prevent re-entrancy:  (@I2C_WRITE_1)
+>>> Warning 216 "main.c" Line 3621(1,2): Interrupts disabled during call to prevent re-entrancy:  (@I2C_READ_1)
+>>> Warning 216 "main.c" Line 3621(1,2): Interrupts disabled during call to prevent re-entrancy:  (bcd2bin)
+      Memory usage:   ROM=57%      RAM=7% - 8%
+      0 Errors,  6 Warnings.
+Build Successful.

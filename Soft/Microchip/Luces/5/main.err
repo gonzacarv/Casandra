@@ -1,0 +1,5 @@
+Compiling D:\2.Datos\Electronica\Proyectos\Microchip\Proyecto Casandra\Version final - GDrive\Soft\Luces\5\main on 14-abr.-22 at 16:20
+>>> Warning 203 "main.c" Line 126(1,1): Condition always TRUE
+      Memory usage:   ROM=22%      RAM=20% - 22%
+      0 Errors,  1 Warnings.
+Build Successful.

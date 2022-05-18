@@ -1,0 +1,123 @@
+004-005 @WRITE_PROGRAM_MEMORY8.P1
+004-005 @READ_PROGRAM_MEMORY8.P2
+015     CCP_1
+015     CCP_1_LOW
+016     CCP_1_HIGH
+020     @INTERRUPT_AREA
+021     @INTERRUPT_AREA
+022     @INTERRUPT_AREA
+023     @INTERRUPT_AREA
+024     @INTERRUPT_AREA
+025     @INTERRUPT_AREA
+026     @INTERRUPT_AREA
+027     @INTERRUPT_AREA
+028     @INTERRUPT_AREA
+029     rs232_errors
+02A-02D Comando
+02E     i
+02F     j
+030     VAlarma
+031-032 LuzExt
+033     LuzSol
+034-035 Vbatt
+036     VBateria
+037-038 Tempe
+039     TempExt
+03A-03D AuxTemp
+03E-041 Bata
+042-045 Solcito
+046-047 TempNew
+048-049 TempOld
+04A-04B ADCval
+04C-04F @MULFF.P1
+04C-04D @ITOF.P2
+04C     @delay_ms1.P3
+04C-04F @SFTOI.P4
+04C     main.@SCRATCH1
+04C     TomaADC.@SCRATCH1
+04D     main.@SCRATCH2
+04D     TomaADC.@SCRATCH2
+04E     main.@SCRATCH3
+04F     main.@SCRATCH4
+050-053 @ADDFF.P1
+050-053 @MULFF.P2
+054-057 @ADDFF.P1
+054     @MULFF.@SCRATCH1
+055     @MULFF.@SCRATCH2
+056     @MULFF.@SCRATCH3
+057     @MULFF.@SCRATCH4
+058     @MULFF.@SCRATCH5
+058     @ADDFF.@SCRATCH1
+059     @ADDFF.@SCRATCH2
+05A     @ADDFF.@SCRATCH3
+05B     @ADDFF.@SCRATCH4
+05C     @ADDFF.@SCRATCH5
+05D     @ADDFF.@SCRATCH6
+05E     @ADDFF.@SCRATCH7
+05F     @ADDFF.@SCRATCH8
+060     BusData.@SCRATCH1
+060     TLargo.@SCRATCH1
+060     Comunica.@SCRATCH1
+061     BusData.@SCRATCH2
+061     TLargo.@SCRATCH2
+062     @PUTCHAR_BIU_1.P1
+062     BusData.@SCRATCH3
+063     BusData.@SCRATCH4
+077     @SCRATCH
+078     @SCRATCH
+078     _RETURN_
+079     @SCRATCH
+07A     @SCRATCH
+09C.6   C1OUT
+09C.7   C2OUT
+10D-10E @READ_PROGRAM_MEMORY8.P1
+10D-10E @WRITE_PROGRAM_MEMORY8.P2
+
+ROM Allocation:
+0000EE  @delay_ms1
+0000A3  @PUTCHAR_BIU_1
+000047  @GETCH_BIU_1
+00045B  main
+000269  @ITOF
+000286  @MULFF
+0002FB  @ADDFF
+00043C  @SFTOI
+00003B  BusData
+0000B7  TLargo
+000103  inicio
+000067  Comunica
+0001FF  Sonar
+00020D  TomaADC
+00045B  @cinit1
+00047A  @cinit2
+
+Project Directory:
+    D:\2.Datos\Electronica\Proyectos\Microchip\Proyecto Casandra\Version final - GDrive\Soft\Alarma\
+
+Project Files:
+    main.c                                                  [26-mar.-21 11:52  CRC=3EB614D6]
+    C:\Program Files (x86)\PICC\devices\16f88.h             [30-nov.-12 18:59  CRC=F409A014]
+
+Source signature=26C954FE
+
+Units:
+    main (main)
+
+Compiler Settings:
+    Processor:      PIC16F88
+    Pointer Size:   16
+    ADC Range:      0-1023
+    Opt Level:      9
+    Short,Int,Long: UNSIGNED: 1,8,16
+    Float,Double:   32,32
+
+Output Files:
+    Errors:      main.err
+    Ext Symbols: main.esym
+    INHX8:       main.hex
+    Symbols:     main.sym
+    List:        main.lst
+    Debug/COFF:  main.cof
+    Project:     main.PJT
+    Call Tree:   main.tre
+    Statistics:  main.STA

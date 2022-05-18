@@ -1,0 +1,119 @@
+ÀÄmain
+   ÃÄmain  0/107  Ram=1
+   ³  ÃÄ@cinit1  (Inline)  Ram=0
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄSalidas  0/156  Ram=0
+   ³  ÃÄComunica  0/614  Ram=2
+   ³  ³  ÃÄ@PSTRINGCN7_621  (Inline)  Ram=5
+   ³  ³  ³  ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³  ³  ³  ÀÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³  ³  ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³  ³  ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³  ³  ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³  ³  ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³  ³  ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³  ³  ÀÄ@goto10827  0/36  Ram=0
+   ³  ÀÄEntradas  0/531  Ram=2
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ³  ÀÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PSTRINGC7_621  0/86  Ram=4
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÀÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ÀÄCruce  0/7  Ram=0

@@ -1,0 +1,154 @@
+
+int k;
+int i;
+
+while(1){
+LEDOFF;
+delay_ms(2000);
+LEDON;
+delay_ms(50);
+LEDOFF;
+delay_ms(50);
+LEDON;
+delay_ms(50);
+LEDOFF;
+delay_ms(2000);
+
+
+
+if (input(IN1)){
+for(i=0;i<1;i++){
+LEDON;
+delay_ms(100);
+LEDOFF;
+delay_ms(250);
+}//for
+LEDOFF;
+delay_ms(2000);
+}//if
+
+if (input(IN2)){
+for(i=0;i<2;i++){
+LEDON;
+delay_ms(100);
+LEDOFF;
+delay_ms(250);
+}//for
+LEDOFF;
+delay_ms(2000);
+}//if
+
+if (input(IN3)){
+for(i=0;i<3;i++){
+LEDON;
+delay_ms(100);
+LEDOFF;
+delay_ms(250);
+}//for
+LEDOFF;
+delay_ms(2000);
+}//if
+
+if (input(IN4)){
+for(i=0;i<4;i++){
+LEDON;
+delay_ms(100);
+LEDOFF;
+delay_ms(250);
+}//for
+LEDOFF;
+delay_ms(2000);
+}//if
+
+if (input(IN5)){
+for(i=0;i<5;i++){
+LEDON;
+delay_ms(100);
+LEDOFF;
+delay_ms(250);
+}//for
+LEDOFF;
+delay_ms(2000);
+}//if
+
+if (input(IN6)){
+for(i=0;i<6;i++){
+LEDON;
+delay_ms(100);
+LEDOFF;
+delay_ms(250);
+}//for
+LEDOFF;
+delay_ms(2000);
+}//if
+
+if (input(IN7)){
+for(i=0;i<7;i++){
+LEDON;
+delay_ms(100);
+LEDOFF;
+delay_ms(250);
+}//for
+LEDOFF;
+delay_ms(2000);
+}//if
+
+if (input(IN8)){
+for(i=0;i<8;i++){
+LEDON;
+delay_ms(100);
+LEDOFF;
+delay_ms(250);
+}//for
+LEDOFF;
+delay_ms(2000);
+}//if
+
+if (input(IN9)){
+for(i=0;i<9;i++){
+LEDON;
+delay_ms(100);
+LEDOFF;
+delay_ms(250);
+}//for
+LEDOFF;
+delay_ms(2000);
+}//if
+
+if (input(IN10)){
+for(i=0;i<10;i++){
+LEDON;
+delay_ms(100);
+LEDOFF;
+delay_ms(250);
+}//for
+LEDOFF;
+delay_ms(2000);
+}//if
+
+if (input(IN11)){
+for(i=0;i<11;i++){
+LEDON;
+delay_ms(100);
+LEDOFF;
+delay_ms(250);
+}//for
+LEDOFF;
+delay_ms(2000);
+}//if
+
+if (input(IN12)){
+for(i=0;i<12;i++){
+LEDON;
+delay_ms(100);
+LEDOFF;
+delay_ms(250);
+}//for
+LEDOFF;
+delay_ms(2000);
+}//if
+
+
+
+
+} // While 1

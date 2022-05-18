@@ -1,0 +1,10 @@
+>>> Warning 203 "D:\Dropbox\Gonzalo\Proyecto Casandra\Version final\Soft\Servidor\DS1307.c" Line 18(1,1): Condition always TRUE
+>>> Warning 203 "main.c" Line 353(1,1): Condition always TRUE
+>>> Warning 216 "main.c" Line 4875(1,2): Interrupts disabled during call to prevent re-entrancy:  (@delay_ms1)
+>>> Warning 216 "main.c" Line 4875(1,2): Interrupts disabled during call to prevent re-entrancy:  (@I2C_WRITE_1)
+>>> Warning 216 "main.c" Line 4875(1,2): Interrupts disabled during call to prevent re-entrancy:  (@I2C_READ_1)
+>>> Warning 216 "main.c" Line 4875(1,2): Interrupts disabled during call to prevent re-entrancy:  (bcd2bin)
+>>> Warning 216 "main.c" Line 4875(1,2): Interrupts disabled during call to prevent re-entrancy:  (@DIV88)
+      Memory usage:   ROM=73%      RAM=12% - 14%
+      0 Errors,  7 Warnings.
+Build Successful.

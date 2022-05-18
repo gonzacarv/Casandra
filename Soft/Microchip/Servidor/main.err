@@ -1,0 +1,17 @@
+>>> Warning 203 "D:\2.Datos\Electronica\Proyectos\Microchip\Proyecto Casandra\Version final\Soft\Servidor\DS1307.c" Line 19(1,1): Condition always TRUE
+>>> Warning 203 "main.c" Line 381(1,1): Condition always TRUE
+>>> Warning 216 "main.c" Line 5542(0,1): Interrupts disabled during call to prevent re-entrancy:  (@delay_ms1)
+>>> Warning 216 "main.c" Line 5542(0,1): Interrupts disabled during call to prevent re-entrancy:  (@I2C_WRITE_1)
+>>> Warning 216 "main.c" Line 5542(0,1): Interrupts disabled during call to prevent re-entrancy:  (@I2C_READ_1)
+>>> Warning 216 "main.c" Line 5542(0,1): Interrupts disabled during call to prevent re-entrancy:  (bcd2bin)
+>>> Warning 216 "main.c" Line 5542(0,1): Interrupts disabled during call to prevent re-entrancy:  (lcd_send_nibble)
+>>> Warning 216 "main.c" Line 5542(0,1): Interrupts disabled during call to prevent re-entrancy:  (lcd_send_byte)
+>>> Warning 216 "main.c" Line 5542(0,1): Interrupts disabled during call to prevent re-entrancy:  (lcd_gotoxy)
+>>> Warning 216 "main.c" Line 5542(0,1): Interrupts disabled during call to prevent re-entrancy:  (BusData)
+>>> Warning 216 "main.c" Line 5542(0,1): Interrupts disabled during call to prevent re-entrancy:  (@PUTCHAR_BIU_1)
+>>> Warning 216 "main.c" Line 5542(0,1): Interrupts disabled during call to prevent re-entrancy:  (Apagar)
+>>> Warning 216 "main.c" Line 5542(0,1): Interrupts disabled during call to prevent re-entrancy:  (Prender)
+>>> Warning 202 "main.c" Line 4168(5,7): Variable never used:   ii
+      Memory usage:   ROM=90%      RAM=9% - 11%
+      0 Errors,  14 Warnings.
+Build Successful.

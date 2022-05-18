@@ -1,0 +1,8 @@
+>>> Warning 203 "main.c" Line 84(1,1): Condition always TRUE
+>>> Warning 216 "main.c" Line 314(0,1): Interrupts disabled during call to prevent re-entrancy:  (@PUTCHAR_BIU_1)
+>>> Warning 202 "main.c" Line 57(6,11): Variable never used:   Vbatt
+>>> Warning 202 "main.c" Line 58(5,13): Variable never used:   VBateria
+>>> Warning 202 "main.c" Line 67(8,12): Variable never used:   Bata
+      Memory usage:   ROM=35%      RAM=14% - 20%
+      0 Errors,  5 Warnings.
+Build Successful.

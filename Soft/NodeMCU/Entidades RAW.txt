@@ -1,0 +1,113 @@
+  - entity: light.luz_entrada_cuartos_cucha_de_mao
+    secondary_info: last-changed
+    name: Cucha Mao
+  - entity: light.luz_gon_cama_derecha
+  - entity: light.luz_gon_cama_izquierda
+  - entity: light.luz_mama_cama_izquierda
+  - entity: light.luz_mama_y_papa_antebano
+  - entity: light.luz_mama_y_papa_vestidor
+  - entity: light.luz_nico_cama_derecha
+  - entity: light.luz_nico_cama_izquierda
+  - entity: light.luz_nico_y_gon_antebano
+  - entity: light.luz_nico_y_gon_bano
+  - entity: light.luz_papa_cama_derecha
+  - entity: light.luz_pasillo_frente_a_los_cuartos
+  - entity: light.luz_pasillo_frente_al_estar
+  - entity: light.luz_perimetro_exterior
+  - entity: light.luz_ppal_cuarto_mama_y_papa
+  - entity: light.luz_ppal_cuarto_nico
+  - entity: light.luz_ventanal_hall_entrada
+  - entity: light.luz_ppal_cuarto_gon
+  - entity: light.mama_y_papa_bano
+  - entity: light.luz_estar
+  - entity: light.luz_cocina
+  - entity: light.luz_living
+  - entity: light.luz_comedor
+  - entity: light.luz_hall
+  - entity: light.luz_lavadero
+  - entity: light.luz_toilette
+  - entity: light.pasillo_del_lavadero
+  - entity: light.luz_garage
+  - entity: light.luz_exterior_estar
+  - entity: light.luz_perimetro_entrada
+  - entity: light.ventilador_estar
+  - entity: light.luz_principal_galeria
+  - entity: light.luz_pared_de_la_galeria
+  - entity: light.luz_zona_parrilla
+  - entity: light.luz_guirnalda
+  - entity: light.ventilador_galeria
+    icon: mdi:fan
+  - entity: light.luz_de_parrilla
+  - entity: light.luz_sodio_jardin
+  - entity: light.luz_led_cobertizo
+  - entity: light.luz_led_frente
+    name: Luz LED Frente
+  - entity: light.luz_led_entrada
+
+
+  - entity: sensor.sensor_temperatura_techo
+  - entity: sensor.sensor_temperatura_cocina
+  - entity: sensor.sensor_temperatura_living
+  - entity: sensor.sensor_temperatura_pasillo_cuartos
+  - entity: sensor.sensor_temperatura_galeria
+  - entity: sensor.sensor_humedad_cocina
+    icon: mdi:water-percent
+  - entity: sensor.sensor_humedad_living
+    icon: mdi:water-percent
+  - entity: sensor.sensor_humedad_pasillo_cuartos
+    icon: mdi:water-percent
+  - entity: sensor.sensor_humedad_galeria
+    icon: mdi:water-percent
+
+
+  - entity: binary_sensor.sensor_de_lluvia
+    icon: mdi:weather-rainy
+  - entity: binary_sensor.sensor_pasillo_cuartos
+  - entity: binary_sensor.sensor_pasillo_mama_y_papa
+  - entity: binary_sensor.sensor_hall
+  - entity: binary_sensor.sensor_cocina
+  - entity: binary_sensor.sensor_living
+  - entity: binary_sensor.sensor_pasillo_lavadero
+  - entity: binary_sensor.sensor_garage
+  - entity: binary_sensor.sensor_estar
+  - entity: binary_sensor.sensor_galeria
+  - entity: binary_sensor.sensor_parrilla
+  - entity: sensor.luz_intensidad
+    icon: mdi:white-balance-sunny
+        - sensor.processor_temperature
+        - sensor.processor_use
+        - sensor.memory_use_percent
+
+
+
+
+  - platform: group
+    name: PIR Pasillo Dorm
+    unique_id: "SensoresPasilloDorm"
+    entities:
+      - binary_sensor.sensor_pasillo_mama_y_papa
+      - binary_sensor.sensor_pasillo_cuartos
+
+  - platform: group
+    name: PIR Interior
+    unique_id: "SensoresInterior"
+    entities:
+      - binary_sensor.sensor_hall
+      - binary_sensor.sensor_cocina
+      - binary_sensor.sensor_living
+      - binary_sensor.sensor_pasillo_lavadero
+
+  - platform: group
+    name: PIR Galería
+    unique_id: "SensoresGaleria"
+    entities:
+      - binary_sensor.sensor_galeria
+      - binary_sensor.sensor_parrilla
+
+
+
+
+
+
+
+

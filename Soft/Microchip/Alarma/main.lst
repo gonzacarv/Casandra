@@ -1,0 +1,1290 @@
+CCS PCM C Compiler, Version 4.140, 32554               25-sep.-21 12:14
+
+               Filename:   D:\2.Datos\Electronica\Proyectos\Microchip\Proyecto Casandra\Version final - GDrive\Soft\Alarma\main.lst
+
+               ROM used:   1446 words (35%)
+                           Largest free fragment is 2048
+               RAM used:   53 (14%) at main() level
+                           73 (20%) worst case
+               Stack:     4 worst case (2 in main + 2 for interrupts)
+
+*
+0000:  MOVLW  04
+0001:  MOVWF  0A
+0002:  GOTO   45B
+0003:  NOP
+0004:  MOVWF  7F
+0005:  SWAPF  03,W
+0006:  CLRF   03
+0007:  MOVWF  21
+0008:  MOVF   7F,W
+0009:  MOVWF  20
+000A:  MOVF   0A,W
+000B:  MOVWF  27
+000C:  CLRF   0A
+000D:  SWAPF  20,F
+000E:  MOVF   04,W
+000F:  MOVWF  22
+0010:  MOVF   77,W
+0011:  MOVWF  23
+0012:  MOVF   78,W
+0013:  MOVWF  24
+0014:  MOVF   79,W
+0015:  MOVWF  25
+0016:  MOVF   7A,W
+0017:  MOVWF  26
+0018:  BCF    03.7
+0019:  BCF    03.5
+001A:  MOVLW  8C
+001B:  MOVWF  04
+001C:  BTFSS  00.5
+001D:  GOTO   020
+001E:  BTFSC  0C.5
+001F:  GOTO   037
+0020:  MOVLW  8C
+0021:  MOVWF  04
+0022:  BTFSS  00.0
+0023:  GOTO   026
+0024:  BTFSC  0C.0
+0025:  GOTO   039
+0026:  MOVF   22,W
+0027:  MOVWF  04
+0028:  MOVF   23,W
+0029:  MOVWF  77
+002A:  MOVF   24,W
+002B:  MOVWF  78
+002C:  MOVF   25,W
+002D:  MOVWF  79
+002E:  MOVF   26,W
+002F:  MOVWF  7A
+0030:  MOVF   27,W
+0031:  MOVWF  0A
+0032:  SWAPF  21,W
+0033:  MOVWF  03
+0034:  SWAPF  7F,F
+0035:  SWAPF  7F,W
+0036:  RETFIE
+0037:  BCF    0A.3
+0038:  GOTO   03B
+0039:  BCF    0A.3
+003A:  GOTO   0B7
+.................... /*====================================================================================================== 
+.................... ||   Proyecto: Casandra v1.1                                                                          || 
+.................... ||   Autor: Gonzalo Carvallo (gonzacarv@gmail.com)                                                    || 
+.................... ||   Fecha: 07/2014 // version 03/2021                                                                || 
+.................... ||   Compilador: PCWHD v5.025 (www.ccsinfo.com)                                                       || 
+.................... ||   Fuente: http://                                                                                  || 
+.................... ||                                                                                                    || 
+.................... || Firmware del modulo de alarma (con sensor de luz y de temperatura) correspondiente                 || 
+.................... || al sistema domotico CASANDRA. Control general con uso intensivo de EEPROM. Comunicacion sobre par  || 
+.................... || trensado usando el transceptor SN75176.                                                            || 
+.................... ||                                                                                                    || 
+.................... ======================================================================================================*/ 
+....................  
+.................... #include <16f88.h> 
+.................... //////// Standard Header file for the PIC16F88 device //////////////// 
+.................... #device PIC16F88 
+.................... #list 
+....................  
+.................... #device ADC=10 
+.................... //#byte TMR1H = 0xFCF // Le pongo nombre al registro alto de timer 1 
+.................... //#byte TMR1L = 0xFCE // Le pongo nombre al registro bajo de timer 1 
+....................  
+.................... #fuses WDT, MCLR, NOPUT, INTRC_IO, NOBROWNOUT // Opciones de configuración 
+....................  
+.................... #use delay(clock=4000000)  //Reloj de 4MHz 
+*
+00EE:  MOVLW  4C
+00EF:  MOVWF  04
+00F0:  BCF    03.7
+00F1:  MOVF   00,W
+00F2:  BTFSC  03.2
+00F3:  GOTO   102
+00F4:  MOVLW  01
+00F5:  MOVWF  78
+00F6:  CLRF   77
+00F7:  DECFSZ 77,F
+00F8:  GOTO   0F7
+00F9:  DECFSZ 78,F
+00FA:  GOTO   0F6
+00FB:  MOVLW  4A
+00FC:  MOVWF  77
+00FD:  DECFSZ 77,F
+00FE:  GOTO   0FD
+00FF:  GOTO   100
+0100:  DECFSZ 00,F
+0101:  GOTO   0F4
+0102:  RETURN
+.................... #use rs232(baud=2400, xmit=PIN_B5, rcv=PIN_B2, enable=PIN_B3, ERRORS) // Comunicacion serial 
+*
+0047:  BTFSS  0C.5
+0048:  GOTO   047
+0049:  MOVF   18,W
+004A:  MOVWF  29
+004B:  MOVF   1A,W
+004C:  MOVWF  78
+004D:  BTFSS  29.1
+004E:  GOTO   051
+004F:  BCF    18.4
+0050:  BSF    18.4
+*
+00A3:  BSF    03.5
+00A4:  BCF    06.3
+00A5:  BCF    03.5
+00A6:  BSF    06.3
+00A7:  BTFSS  0C.4
+00A8:  GOTO   0A7
+00A9:  MOVF   62,W
+00AA:  MOVWF  19
+00AB:  NOP
+00AC:  BSF    03.5
+00AD:  BCF    06.3
+00AE:  BCF    03.5
+00AF:  BSF    06.3
+00B0:  BSF    03.5
+00B1:  BTFSS  18.1
+00B2:  GOTO   0B1
+00B3:  BCF    06.3
+00B4:  BCF    03.5
+00B5:  BCF    06.3
+00B6:  RETURN
+....................  
+.................... //setup_oscillator( OSC_INTERNAL, 4000000); 
+....................  
+.................... ///////////////// Definiciones de Pines ///////////////////// 
+.................... #define LUZ 0           // Canal analogico 0 
+.................... //#define BATERIA 1       // Canal analogico 1 
+.................... #define TEMP 2          // Canal analogico 2 
+.................... //#define JUMPER 3        // Canal analogico 3 
+.................... #define BATERIA 4        // Canal analogico 4 
+.................... #define PROMEDIO 5      // Cantidad de veces que se promedia lo obtenido en ADC 
+.................... #define RESTA 100       // No es realmente una resta, es un delay de inicio 
+.................... #define LUZEXTON output_high(PIN_B6) 
+.................... #define LUZEXTOFF output_low(PIN_B6) 
+.................... #define PILOTON output_low(PIN_A6) 
+.................... #define PILOTOFF output_high(PIN_A6) 
+.................... #define SIRENAON output_high(PIN_A7) 
+.................... #define SIRENAOFF output_low(PIN_A7) 
+....................  
+....................  
+.................... ////////////// Definiciones de funciones //////////////// 
+.................... void inicio();   // Funcion de inicio y configuracion del modulo 
+.................... void Comunica(); // Funcion de lectura de puerto serial y armado del comando, se ejecuta despues de que BusData tiene el comando lleno 
+.................... void BusData();  // LLego algo al bus de datos (solo se ejecuta por interrupcion de byte esperando en buffer) 
+.................... void TLargo();   // timer para los tiempos largos 
+.................... void Sonar();    // Funcion que gestiona tiempos de sirena 
+.................... void TomaADC();  // Funcion de toma de valores analogicos 
+....................  
+.................... ////////// Variables Globales /////////////// 
+.................... int Comando[4]; // Arreglo que contiene el comando una vez armado 
+.................... int i;          // Contador de comando 
+.................... int j;          // Contador de tiempos largos 
+.................... int VAlarma;    // Valor actual de la alarma -=(0):Apagada=-    -=(1-99):Encendida entre 1 y 99 seg=- -=(100):Encendido continuo=- 
+.................... long LuzExt;    // Intensidad de luz exterior para calculos 
+.................... int LuzSol;     // Intensidad de luz para la red 
+.................... long Vbatt;     // Tension de la bateria para calculos 
+.................... int VBateria;   // Tension de la bateria para la red 
+.................... long Tempe;     // Temperatura exterior para calculos 
+.................... int TempExt;    // Temperatura exterior para la red 
+.................... //long Jump;      // Estado del Jumper para calculos 
+.................... //int JumFuen;    // Estado del jumper y de la fuente para la red (0-15) tension de fuente con jumper // (100-115) tension de fuente sin jumper 
+.................... //long Vf;        // Tension de la fuente para calculos 
+....................  
+.................... ///////// Variables locales para el calculo de valores //////////// 
+.................... double AuxTemp; 
+.................... double Bata; 
+.................... double Solcito; 
+.................... //double Jjumper; 
+.................... long TempNew;       // Temperatura exterior para calculos 
+.................... long TempOld=200;   // Temperatura exterior para calculos 
+.................... long ADCval; 
+....................  
+.................... void main(){ 
+*
+045B:  CLRF   04
+045C:  BCF    03.7
+045D:  MOVLW  1F
+045E:  ANDWF  03,F
+045F:  MOVLW  62
+0460:  BSF    03.5
+0461:  MOVWF  0F
+0462:  MOVF   0F,W
+0463:  BCF    06.3
+0464:  BCF    03.5
+0465:  BCF    06.3
+0466:  CLRF   29
+0467:  MOVLW  19
+0468:  BSF    03.5
+0469:  MOVWF  19
+046A:  MOVLW  A2
+046B:  MOVWF  18
+046C:  MOVLW  90
+046D:  BCF    03.5
+046E:  MOVWF  18
+046F:  CLRF   49
+0470:  MOVLW  C8
+0471:  MOVWF  48
+0472:  BSF    03.5
+0473:  BCF    1F.4
+0474:  BCF    1F.5
+0475:  MOVF   1B,W
+0476:  ANDLW  80
+0477:  MOVWF  1B
+0478:  MOVLW  07
+0479:  MOVWF  1C
+....................  
+.................... inicio(); 
+047A:  BCF    03.5
+047B:  GOTO   103
+.................... restart_wdt(); 
+047C:  CLRWDT
+.................... LUZEXTOFF; // Tambien con la luz apagada 
+047D:  BSF    03.5
+047E:  BCF    06.6
+047F:  BCF    03.5
+0480:  BCF    06.6
+.................... PILOTOFF; 
+0481:  BSF    03.5
+0482:  BCF    05.6
+0483:  BCF    03.5
+0484:  BSF    05.6
+.................... delay_ms(100); 
+0485:  MOVLW  64
+0486:  MOVWF  4C
+0487:  CALL   0EE
+.................... LUZEXTOFF; // Tambien con la luz apagada 
+0488:  BSF    03.5
+0489:  BCF    06.6
+048A:  BCF    03.5
+048B:  BCF    06.6
+.................... restart_wdt(); 
+048C:  CLRWDT
+....................  
+.................... while(1){ 
+.................... restart_wdt(); 
+048D:  CLRWDT
+.................... PILOTOFF; 
+048E:  BSF    03.5
+048F:  BCF    05.6
+0490:  BCF    03.5
+0491:  BSF    05.6
+.................... Sonar(); 
+0492:  GOTO   1FF
+.................... //if (Jump < 10) Sonar();  // Solo suena si esta presente el jumper de seguridad 
+.................... //else SIRENAOFF;          // si no esta, deja de sonar la alarma 
+....................  
+....................  
+.................... TomaADC(); 
+0493:  GOTO   20D
+....................  
+.................... //AuxTemp = (float) ((4.61 * Tempe) - 685.53)/2;  // Calculamos y convertimos la temperatura exterior 
+.................... AuxTemp = (0.7515 * Tempe) - 123.63;  // Calculamos y convertimos la temperatura exterior 
+0494:  MOVF   38,W
+0495:  MOVWF  4D
+0496:  MOVF   37,W
+0497:  MOVWF  4C
+0498:  CALL   269
+0499:  MOVLW  4E
+049A:  MOVWF  4F
+049B:  MOVLW  62
+049C:  MOVWF  4E
+049D:  MOVLW  40
+049E:  MOVWF  4D
+049F:  MOVLW  7E
+04A0:  MOVWF  4C
+04A1:  MOVF   7A,W
+04A2:  MOVWF  53
+04A3:  MOVF   79,W
+04A4:  MOVWF  52
+04A5:  MOVF   78,W
+04A6:  MOVWF  51
+04A7:  MOVF   77,W
+04A8:  MOVWF  50
+04A9:  CALL   286
+04AA:  MOVF   77,W
+04AB:  MOVWF  4C
+04AC:  MOVF   78,W
+04AD:  MOVWF  4D
+04AE:  MOVF   79,W
+04AF:  MOVWF  4E
+04B0:  MOVF   7A,W
+04B1:  MOVWF  4F
+04B2:  BSF    03.1
+04B3:  MOVF   7A,W
+04B4:  MOVWF  53
+04B5:  MOVF   79,W
+04B6:  MOVWF  52
+04B7:  MOVF   78,W
+04B8:  MOVWF  51
+04B9:  MOVF   77,W
+04BA:  MOVWF  50
+04BB:  MOVLW  8F
+04BC:  MOVWF  57
+04BD:  MOVLW  42
+04BE:  MOVWF  56
+04BF:  MOVLW  77
+04C0:  MOVWF  55
+04C1:  MOVLW  85
+04C2:  MOVWF  54
+04C3:  CALL   2FB
+04C4:  MOVF   7A,W
+04C5:  MOVWF  3D
+04C6:  MOVF   79,W
+04C7:  MOVWF  3C
+04C8:  MOVF   78,W
+04C9:  MOVWF  3B
+04CA:  MOVF   77,W
+04CB:  MOVWF  3A
+.................... //AuxTemp = (((AuxTemp * 9) + (0.461 * Tempe) - 68.553) / 10) ;  // Calculamos y convertimos la temperatura exterior 
+.................... //AuxTemp = (Tempe / 2); 
+.................... TempExt = AuxTemp; 
+04CC:  MOVF   3D,W
+04CD:  MOVWF  4F
+04CE:  MOVF   3C,W
+04CF:  MOVWF  4E
+04D0:  MOVF   3B,W
+04D1:  MOVWF  4D
+04D2:  MOVF   3A,W
+04D3:  MOVWF  4C
+04D4:  CALL   43C
+04D5:  MOVF   78,W
+04D6:  MOVWF  39
+....................  
+....................  
+.................... //Bata = (0.29 * Vbatt) - 0.91;  // Calculamos y convertimos la tension de la bateria va x10 porque la recibo con la coma 
+.................... //ESTA LINEA OK // Bata = ((Bata * 4) + ((0.29 * Vbatt) - 0.91)) / 5;  // Calculamos y convertimos la tension de la bateria 
+.................... //Bata = (Vbatt / 4); 
+.................... //ESTA LINEA OK // VBateria = Bata; 
+....................  
+.................... //------------------ 
+.................... if (LuzExt <= 160) Solcito = (0.305 * LuzExt) - 8.75; 
+04D7:  MOVF   32,F
+04D8:  BTFSS  03.2
+04D9:  GOTO   514
+04DA:  MOVF   31,W
+04DB:  SUBLW  A0
+04DC:  BTFSS  03.0
+04DD:  GOTO   514
+04DE:  MOVF   32,W
+04DF:  MOVWF  4D
+04E0:  MOVF   31,W
+04E1:  MOVWF  4C
+04E2:  CALL   269
+04E3:  MOVLW  F6
+04E4:  MOVWF  4F
+04E5:  MOVLW  28
+04E6:  MOVWF  4E
+04E7:  MOVLW  1C
+04E8:  MOVWF  4D
+04E9:  MOVLW  7D
+04EA:  MOVWF  4C
+04EB:  MOVF   7A,W
+04EC:  MOVWF  53
+04ED:  MOVF   79,W
+04EE:  MOVWF  52
+04EF:  MOVF   78,W
+04F0:  MOVWF  51
+04F1:  MOVF   77,W
+04F2:  MOVWF  50
+04F3:  CALL   286
+04F4:  MOVF   77,W
+04F5:  MOVWF  4C
+04F6:  MOVF   78,W
+04F7:  MOVWF  4D
+04F8:  MOVF   79,W
+04F9:  MOVWF  4E
+04FA:  MOVF   7A,W
+04FB:  MOVWF  4F
+04FC:  BSF    03.1
+04FD:  MOVF   7A,W
+04FE:  MOVWF  53
+04FF:  MOVF   79,W
+0500:  MOVWF  52
+0501:  MOVF   78,W
+0502:  MOVWF  51
+0503:  MOVF   77,W
+0504:  MOVWF  50
+0505:  CLRF   57
+0506:  CLRF   56
+0507:  MOVLW  0C
+0508:  MOVWF  55
+0509:  MOVLW  82
+050A:  MOVWF  54
+050B:  CALL   2FB
+050C:  MOVF   7A,W
+050D:  MOVWF  45
+050E:  MOVF   79,W
+050F:  MOVWF  44
+0510:  MOVF   78,W
+0511:  MOVWF  43
+0512:  MOVF   77,W
+0513:  MOVWF  42
+.................... if ((LuzExt > 160) && (LuzExt < 220)) Solcito = (0.167 * LuzExt) + 13.33; 
+0514:  MOVF   32,F
+0515:  BTFSS  03.2
+0516:  GOTO   51B
+0517:  MOVF   31,W
+0518:  SUBLW  A0
+0519:  BTFSC  03.0
+051A:  GOTO   55A
+051B:  MOVF   32,F
+051C:  BTFSS  03.2
+051D:  GOTO   55A
+051E:  MOVF   31,W
+051F:  SUBLW  DB
+0520:  BTFSS  03.0
+0521:  GOTO   55A
+0522:  MOVF   32,W
+0523:  MOVWF  4D
+0524:  MOVF   31,W
+0525:  MOVWF  4C
+0526:  CALL   269
+0527:  MOVLW  0C
+0528:  MOVWF  4F
+0529:  MOVLW  02
+052A:  MOVWF  4E
+052B:  MOVLW  2B
+052C:  MOVWF  4D
+052D:  MOVLW  7C
+052E:  MOVWF  4C
+052F:  MOVF   7A,W
+0530:  MOVWF  53
+0531:  MOVF   79,W
+0532:  MOVWF  52
+0533:  MOVF   78,W
+0534:  MOVWF  51
+0535:  MOVF   77,W
+0536:  MOVWF  50
+0537:  CALL   286
+0538:  MOVF   77,W
+0539:  MOVWF  4C
+053A:  MOVF   78,W
+053B:  MOVWF  4D
+053C:  MOVF   79,W
+053D:  MOVWF  4E
+053E:  MOVF   7A,W
+053F:  MOVWF  4F
+0540:  BCF    03.1
+0541:  MOVF   7A,W
+0542:  MOVWF  53
+0543:  MOVF   79,W
+0544:  MOVWF  52
+0545:  MOVF   78,W
+0546:  MOVWF  51
+0547:  MOVF   77,W
+0548:  MOVWF  50
+0549:  MOVLW  AE
+054A:  MOVWF  57
+054B:  MOVLW  47
+054C:  MOVWF  56
+054D:  MOVLW  55
+054E:  MOVWF  55
+054F:  MOVLW  82
+0550:  MOVWF  54
+0551:  CALL   2FB
+0552:  MOVF   7A,W
+0553:  MOVWF  45
+0554:  MOVF   79,W
+0555:  MOVWF  44
+0556:  MOVF   78,W
+0557:  MOVWF  43
+0558:  MOVF   77,W
+0559:  MOVWF  42
+.................... if (LuzExt >= 220) Solcito = (0.132 * LuzExt) + 21.05; 
+055A:  MOVF   32,F
+055B:  BTFSS  03.2
+055C:  GOTO   561
+055D:  MOVF   31,W
+055E:  SUBLW  DB
+055F:  BTFSC  03.0
+0560:  GOTO   598
+0561:  MOVF   32,W
+0562:  MOVWF  4D
+0563:  MOVF   31,W
+0564:  MOVWF  4C
+0565:  CALL   269
+0566:  MOVLW  02
+0567:  MOVWF  4F
+0568:  MOVLW  2B
+0569:  MOVWF  4E
+056A:  MOVLW  07
+056B:  MOVWF  4D
+056C:  MOVLW  7C
+056D:  MOVWF  4C
+056E:  MOVF   7A,W
+056F:  MOVWF  53
+0570:  MOVF   79,W
+0571:  MOVWF  52
+0572:  MOVF   78,W
+0573:  MOVWF  51
+0574:  MOVF   77,W
+0575:  MOVWF  50
+0576:  CALL   286
+0577:  MOVF   77,W
+0578:  MOVWF  4C
+0579:  MOVF   78,W
+057A:  MOVWF  4D
+057B:  MOVF   79,W
+057C:  MOVWF  4E
+057D:  MOVF   7A,W
+057E:  MOVWF  4F
+057F:  BCF    03.1
+0580:  MOVF   7A,W
+0581:  MOVWF  53
+0582:  MOVF   79,W
+0583:  MOVWF  52
+0584:  MOVF   78,W
+0585:  MOVWF  51
+0586:  MOVF   77,W
+0587:  MOVWF  50
+0588:  MOVLW  66
+0589:  MOVWF  57
+058A:  MOVWF  56
+058B:  MOVLW  28
+058C:  MOVWF  55
+058D:  MOVLW  83
+058E:  MOVWF  54
+058F:  CALL   2FB
+0590:  MOVF   7A,W
+0591:  MOVWF  45
+0592:  MOVF   79,W
+0593:  MOVWF  44
+0594:  MOVF   78,W
+0595:  MOVWF  43
+0596:  MOVF   77,W
+0597:  MOVWF  42
+.................... //------------------ 
+....................  
+.................... //Solcito = (-0.1384 * LuzExt) + 101.2; 
+....................  
+.................... //Solcito = Sum1 + Sum2 + Sum3 + 679.43; 
+.................... //Solcito = (100 - (LuzExt / 7));  // Calculamos y convertimos la luz del sol 
+.................... //Solcito = (((Solcito * 9) + (100 - (LuzExt / 7))) / 10);  // Calculamos y convertimos la luz del sol 
+.................... //LuzSol = (LuzExt / 4); 
+....................  
+.................... //Solcito = (LuzExt / 4); 
+.................... LuzSol = Solcito; 
+0598:  MOVF   45,W
+0599:  MOVWF  4F
+059A:  MOVF   44,W
+059B:  MOVWF  4E
+059C:  MOVF   43,W
+059D:  MOVWF  4D
+059E:  MOVF   42,W
+059F:  MOVWF  4C
+05A0:  CALL   43C
+05A1:  MOVF   78,W
+05A2:  MOVWF  33
+....................  
+....................  
+.................... //Jjumper = (0.027 * Vf) + 0.043;  // Calculamos y convertimos la tension de la bateria 
+.................... //Jjumper = (((Jjumper * 9) + (0.027 * Vf) + 0.043) / 10) ;  // Calculamos y convertimos la tension de la bateria 
+....................  
+.................... //if (Jump < 10) JumFuen = Jjumper * 2; // mando solo el valor cuando el jumper esta 
+.................... //else JumFuen = Jjumper + 100; // mando el valor +100 cuando el jumper NO esta 
+.................... restart_wdt(); 
+05A3:  CLRWDT
+....................  
+.................... } //while 
+05A4:  GOTO   48D
+.................... } // Main 
+....................  
+....................  
+.................... ////////////////////////// INTERRUPCIONES ////////////////////////////// 
+.................... #int_rda 
+.................... void BusData(){ 
+05A5:  SLEEP
+.................... //PILOTON; 
+.................... if (kbhit()){ 
+*
+003B:  BTFSS  0C.5
+003C:  GOTO   0A0
+.................... Comando[i]=getc(); 
+003D:  MOVLW  2A
+003E:  ADDWF  2E,W
+003F:  MOVWF  04
+0040:  BCF    03.7
+0041:  CLRF   63
+0042:  MOVF   04,W
+0043:  MOVWF  62
+0044:  BCF    63.0
+0045:  BTFSC  03.7
+0046:  BSF    63.0
+*
+0051:  MOVF   62,W
+0052:  MOVWF  04
+0053:  BCF    03.7
+0054:  BTFSC  63.0
+0055:  BSF    03.7
+0056:  MOVF   78,W
+0057:  MOVWF  00
+.................... if (Comando[i] == 250) i=0; 
+0058:  MOVLW  2A
+0059:  ADDWF  2E,W
+005A:  MOVWF  04
+005B:  BCF    03.7
+005C:  MOVF   00,W
+005D:  SUBLW  FA
+005E:  BTFSS  03.2
+005F:  GOTO   062
+0060:  CLRF   2E
+.................... else ++i; 
+0061:  GOTO   063
+0062:  INCF   2E,F
+.................... if (i==3) Comunica(); 
+0063:  MOVF   2E,W
+0064:  SUBLW  03
+0065:  BTFSS  03.2
+0066:  GOTO   0A0
+.................... } 
+.................... } 
+....................  
+*
+00A0:  BCF    0C.5
+00A1:  BCF    0A.3
+00A2:  GOTO   026
+.................... #int_TIMER1 
+.................... void TLargo(){ 
+.................... ++j; // variable de tiempos largos 
+*
+00B7:  INCF   2F,F
+....................  
+.................... if ((VAlarma != 0) && (VAlarma != 100)) --VAlarma; // Resto el valor hasta 0 a menos que ya sea 0, o este sonando de manera continua 
+00B8:  MOVF   30,F
+00B9:  BTFSC  03.2
+00BA:  GOTO   0BF
+00BB:  MOVF   30,W
+00BC:  SUBLW  64
+00BD:  BTFSS  03.2
+00BE:  DECF   30,F
+....................  
+.................... if ((j % 32) == 0) { // Enviamos los datos en un momento arbirtario (pongo 60 para que haya tiempo de hacer los calculos analogicos antes del primer envio) 
+00BF:  MOVF   2F,W
+00C0:  ANDLW  1F
+00C1:  BTFSS  03.2
+00C2:  GOTO   0D2
+.................... printf("%c%c%c%c", 250, 165, LuzSol, LuzSol + 165); // Envio valor del sol 
+00C3:  MOVLW  A5
+00C4:  ADDWF  33,W
+00C5:  MOVWF  60
+00C6:  MOVLW  FA
+00C7:  MOVWF  62
+00C8:  CALL   0A3
+00C9:  MOVLW  A5
+00CA:  MOVWF  62
+00CB:  CALL   0A3
+00CC:  MOVF   33,W
+00CD:  MOVWF  62
+00CE:  CALL   0A3
+00CF:  MOVF   60,W
+00D0:  MOVWF  62
+00D1:  CALL   0A3
+.................... //delay_ms(5); 
+.................... } // if j 
+....................  
+.................... if ((j % 32) == 5) { // Enviamos los datos en un momento arbirtario (pongo 60 para que haya tiempo de hacer los calculos analogicos antes del primer envio) 
+00D2:  MOVF   2F,W
+00D3:  ANDLW  1F
+00D4:  SUBLW  05
+00D5:  BTFSS  03.2
+00D6:  GOTO   0EA
+.................... printf("%c%c%c%c", 250, 160, TempExt + 10, TempExt + 10 + 160); // Envio valor del temperatura 
+00D7:  MOVLW  0A
+00D8:  ADDWF  39,W
+00D9:  MOVWF  60
+00DA:  MOVLW  0A
+00DB:  ADDWF  39,W
+00DC:  ADDLW  A0
+00DD:  MOVWF  61
+00DE:  MOVLW  FA
+00DF:  MOVWF  62
+00E0:  CALL   0A3
+00E1:  MOVLW  A0
+00E2:  MOVWF  62
+00E3:  CALL   0A3
+00E4:  MOVF   60,W
+00E5:  MOVWF  62
+00E6:  CALL   0A3
+00E7:  MOVF   61,W
+00E8:  MOVWF  62
+00E9:  CALL   0A3
+.................... //printf("%c%c%c%c", 250, 160, TempExt, TempExt + 160); // Envio valor del temperatura 
+.................... //delay_ms(5); 
+.................... } // if j 
+....................  
+.................... // LINEA CANCELADA // if ((j % 16) == 10) { // Enviamos los datos en un momento arbirtario (pongo 60 para que haya tiempo de hacer los calculos analogicos antes del primer envio) 
+.................... // LINEA CANCELADA // printf("%c%c%c%c", 250, 163, VBateria, VBateria + 163); // Envio valor de tension de bateria 
+.................... //delay_ms(5); 
+.................... // LINEA CANCELADA // } // if j 
+....................  
+.................... restart_wdt(); 
+00EA:  CLRWDT
+.................... } 
+....................  
+....................  
+00EB:  BCF    0C.0
+00EC:  BCF    0A.3
+00ED:  GOTO   026
+.................... void inicio(){  /////////////// INICIO ////////////////////// 
+....................  
+.................... /////////  Inicio el WatchDog  /////////////// 
+.................... setup_wdt(WDT_2304MS); 
+*
+0103:  MOVLW  09
+0104:  BSF    03.6
+0105:  MOVWF  05
+0106:  MOVLW  0F
+0107:  MOVWF  77
+0108:  BCF    03.6
+0109:  CLRF   01
+010A:  MOVLW  81
+010B:  MOVWF  04
+010C:  BCF    03.7
+010D:  MOVF   00,W
+010E:  ANDLW  F0
+010F:  IORLW  07
+0110:  MOVWF  00
+0111:  CLRWDT
+0112:  MOVF   00,W
+0113:  ANDLW  F7
+0114:  BTFSC  77.3
+0115:  ANDLW  F0
+0116:  IORWF  77,W
+0117:  MOVWF  00
+....................  
+.................... restart_wdt(); 
+0118:  CLRWDT
+.................... VAlarma = 0; // Por las dudas iniciamos con la alarma apagada 
+0119:  CLRF   30
+.................... LUZEXTOFF; // Tambien con la luz apagada 
+011A:  BSF    03.5
+011B:  BCF    06.6
+011C:  BCF    03.5
+011D:  BCF    06.6
+....................  
+.................... //////////////////////// INDICADOR DE ARRANQUE /////////////////////////// 
+.................... PILOTON; 
+011E:  BSF    03.5
+011F:  BCF    05.6
+0120:  BCF    03.5
+0121:  BCF    05.6
+.................... delay_ms(RESTA); 
+0122:  MOVLW  64
+0123:  MOVWF  4C
+0124:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+0125:  CLRWDT
+.................... PILOTOFF; 
+0126:  BSF    03.5
+0127:  BCF    05.6
+0128:  BCF    03.5
+0129:  BSF    05.6
+.................... delay_ms(RESTA); 
+012A:  MOVLW  64
+012B:  MOVWF  4C
+012C:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+012D:  CLRWDT
+.................... PILOTON; 
+012E:  BSF    03.5
+012F:  BCF    05.6
+0130:  BCF    03.5
+0131:  BCF    05.6
+.................... delay_ms(RESTA); 
+0132:  MOVLW  64
+0133:  MOVWF  4C
+0134:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+0135:  CLRWDT
+.................... PILOTOFF; 
+0136:  BSF    03.5
+0137:  BCF    05.6
+0138:  BCF    03.5
+0139:  BSF    05.6
+.................... delay_ms(RESTA); 
+013A:  MOVLW  64
+013B:  MOVWF  4C
+013C:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+013D:  CLRWDT
+.................... PILOTON; 
+013E:  BSF    03.5
+013F:  BCF    05.6
+0140:  BCF    03.5
+0141:  BCF    05.6
+.................... delay_ms(RESTA); 
+0142:  MOVLW  64
+0143:  MOVWF  4C
+0144:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+0145:  CLRWDT
+.................... PILOTOFF; 
+0146:  BSF    03.5
+0147:  BCF    05.6
+0148:  BCF    03.5
+0149:  BSF    05.6
+.................... delay_ms(RESTA); 
+014A:  MOVLW  64
+014B:  MOVWF  4C
+014C:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+014D:  CLRWDT
+.................... PILOTON; 
+014E:  BSF    03.5
+014F:  BCF    05.6
+0150:  BCF    03.5
+0151:  BCF    05.6
+.................... delay_ms(RESTA); 
+0152:  MOVLW  64
+0153:  MOVWF  4C
+0154:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+0155:  CLRWDT
+.................... PILOTOFF; 
+0156:  BSF    03.5
+0157:  BCF    05.6
+0158:  BCF    03.5
+0159:  BSF    05.6
+.................... delay_ms(RESTA); 
+015A:  MOVLW  64
+015B:  MOVWF  4C
+015C:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+015D:  CLRWDT
+.................... PILOTON; 
+015E:  BSF    03.5
+015F:  BCF    05.6
+0160:  BCF    03.5
+0161:  BCF    05.6
+.................... delay_ms(RESTA); 
+0162:  MOVLW  64
+0163:  MOVWF  4C
+0164:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+0165:  CLRWDT
+.................... PILOTOFF; 
+0166:  BSF    03.5
+0167:  BCF    05.6
+0168:  BCF    03.5
+0169:  BSF    05.6
+.................... delay_ms(RESTA); 
+016A:  MOVLW  64
+016B:  MOVWF  4C
+016C:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+016D:  CLRWDT
+.................... PILOTON; 
+016E:  BSF    03.5
+016F:  BCF    05.6
+0170:  BCF    03.5
+0171:  BCF    05.6
+.................... delay_ms(RESTA); 
+0172:  MOVLW  64
+0173:  MOVWF  4C
+0174:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+0175:  CLRWDT
+.................... PILOTOFF; 
+0176:  BSF    03.5
+0177:  BCF    05.6
+0178:  BCF    03.5
+0179:  BSF    05.6
+.................... delay_ms(RESTA); 
+017A:  MOVLW  64
+017B:  MOVWF  4C
+017C:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+017D:  CLRWDT
+.................... PILOTON; 
+017E:  BSF    03.5
+017F:  BCF    05.6
+0180:  BCF    03.5
+0181:  BCF    05.6
+.................... delay_ms(RESTA); 
+0182:  MOVLW  64
+0183:  MOVWF  4C
+0184:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+0185:  CLRWDT
+.................... PILOTOFF; 
+0186:  BSF    03.5
+0187:  BCF    05.6
+0188:  BCF    03.5
+0189:  BSF    05.6
+.................... delay_ms(RESTA); 
+018A:  MOVLW  64
+018B:  MOVWF  4C
+018C:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+018D:  CLRWDT
+.................... PILOTON; 
+018E:  BSF    03.5
+018F:  BCF    05.6
+0190:  BCF    03.5
+0191:  BCF    05.6
+.................... delay_ms(RESTA); 
+0192:  MOVLW  64
+0193:  MOVWF  4C
+0194:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+0195:  CLRWDT
+.................... PILOTOFF; 
+0196:  BSF    03.5
+0197:  BCF    05.6
+0198:  BCF    03.5
+0199:  BSF    05.6
+.................... delay_ms(RESTA); 
+019A:  MOVLW  64
+019B:  MOVWF  4C
+019C:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+019D:  CLRWDT
+.................... PILOTON; 
+019E:  BSF    03.5
+019F:  BCF    05.6
+01A0:  BCF    03.5
+01A1:  BCF    05.6
+.................... delay_ms(RESTA); 
+01A2:  MOVLW  64
+01A3:  MOVWF  4C
+01A4:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+01A5:  CLRWDT
+.................... PILOTOFF; 
+01A6:  BSF    03.5
+01A7:  BCF    05.6
+01A8:  BCF    03.5
+01A9:  BSF    05.6
+.................... delay_ms(RESTA); 
+01AA:  MOVLW  64
+01AB:  MOVWF  4C
+01AC:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+01AD:  CLRWDT
+.................... PILOTON; 
+01AE:  BSF    03.5
+01AF:  BCF    05.6
+01B0:  BCF    03.5
+01B1:  BCF    05.6
+.................... delay_ms(RESTA); 
+01B2:  MOVLW  64
+01B3:  MOVWF  4C
+01B4:  CALL   0EE
+.................... restart_wdt(); // Reiniciamos el perro 
+01B5:  CLRWDT
+.................... PILOTOFF; 
+01B6:  BSF    03.5
+01B7:  BCF    05.6
+01B8:  BCF    03.5
+01B9:  BSF    05.6
+01BA:  CLRF   28
+01BB:  BTFSC  0B.7
+01BC:  BSF    28.7
+01BD:  BCF    0B.7
+....................  
+.................... printf("%c%c%c%c", 250, 184, 54, 238); //Identificacion de inicio (49 es 1; 50 es 2; 51 es 3; 52 es 4 y 53 es 5 // 54 es Alarma) // Identificacion de red 
+01BE:  MOVLW  FA
+01BF:  MOVWF  62
+01C0:  CALL   0A3
+01C1:  BTFSC  28.7
+01C2:  BSF    0B.7
+01C3:  CLRF   28
+01C4:  BTFSC  0B.7
+01C5:  BSF    28.7
+01C6:  BCF    0B.7
+01C7:  MOVLW  B8
+01C8:  MOVWF  62
+01C9:  CALL   0A3
+01CA:  BTFSC  28.7
+01CB:  BSF    0B.7
+01CC:  CLRF   28
+01CD:  BTFSC  0B.7
+01CE:  BSF    28.7
+01CF:  BCF    0B.7
+01D0:  MOVLW  36
+01D1:  MOVWF  62
+01D2:  CALL   0A3
+01D3:  BTFSC  28.7
+01D4:  BSF    0B.7
+01D5:  CLRF   28
+01D6:  BTFSC  0B.7
+01D7:  BSF    28.7
+01D8:  BCF    0B.7
+01D9:  MOVLW  EE
+01DA:  MOVWF  62
+01DB:  CALL   0A3
+01DC:  BTFSC  28.7
+01DD:  BSF    0B.7
+....................  
+.................... //// Interrupciones ///// 
+.................... enable_interrupts(global); 
+01DE:  MOVLW  C0
+01DF:  IORWF  0B,F
+.................... enable_interrupts(int_rda); // Interrupcion de llegada de datos 
+01E0:  BSF    03.5
+01E1:  BSF    0C.5
+.................... enable_interrupts(INT_TIMER1); // Interrupcion por timer 1 
+01E2:  BSF    0C.0
+.................... //disable_interrupts(global); 
+....................  
+.................... ////// Conversor AD ////// 
+.................... setup_adc_ports(sAN0|sAN1|sAN2|sAN3|sAN4); 
+01E3:  BCF    1F.4
+01E4:  BCF    1F.5
+01E5:  MOVF   1B,W
+01E6:  ANDLW  80
+01E7:  IORLW  1F
+01E8:  MOVWF  1B
+.................... LUZEXTOFF; // Tambien con la luz apagada 
+01E9:  BCF    06.6
+01EA:  BCF    03.5
+01EB:  BCF    06.6
+.................... setup_adc(ADC_CLOCK_INTERNAL ); 
+01EC:  BSF    03.5
+01ED:  BCF    1F.6
+01EE:  BCF    03.5
+01EF:  BSF    1F.6
+01F0:  BSF    1F.7
+01F1:  BSF    03.5
+01F2:  BSF    1F.7
+01F3:  BCF    03.5
+01F4:  BSF    1F.0
+.................... LUZEXTOFF; // Tambien con la luz apagada 
+01F5:  BSF    03.5
+01F6:  BCF    06.6
+01F7:  BCF    03.5
+01F8:  BCF    06.6
+....................  
+.................... /////////  Temporizadores  /////////////// 
+.................... setup_timer_1(T1_INTERNAL | T1_DIV_BY_8); 
+01F9:  MOVLW  B5
+01FA:  MOVWF  10
+.................... set_timer1(0); 
+01FB:  CLRF   0F
+01FC:  CLRF   0E
+.................... } 
+01FD:  BCF    0A.3
+01FE:  GOTO   47C (RETURN)
+....................  
+.................... void Comunica(){ 
+.................... i=0; 
+*
+0067:  CLRF   2E
+.................... if (( (Comando[0]) + (Comando[1]) ) == Comando[2]){ // Prueba de checksum 
+0068:  MOVF   2B,W
+0069:  ADDWF  2A,W
+006A:  SUBWF  2C,W
+006B:  BTFSS  03.2
+006C:  GOTO   0A0
+.................... if (Comando[0] == 155) { // si el comando es para este modulo (alarma) 
+006D:  MOVF   2A,W
+006E:  SUBLW  9B
+006F:  BTFSS  03.2
+0070:  GOTO   088
+....................    PILOTON; 
+0071:  BSF    03.5
+0072:  BCF    05.6
+0073:  BCF    03.5
+0074:  BCF    05.6
+....................    if (Comando[1] == 0) VAlarma = 0; 
+0075:  MOVF   2B,F
+0076:  BTFSC  03.2
+0077:  CLRF   30
+....................    if (Comando[1] == 100) VAlarma = 100; 
+0078:  MOVF   2B,W
+0079:  SUBLW  64
+007A:  BTFSS  03.2
+007B:  GOTO   07E
+007C:  MOVLW  64
+007D:  MOVWF  30
+....................    if ((Comando[1] != 0) && (Comando[1] != 100)) VAlarma = (Comando[1] * 2); // proporcion para que cuente en segundos 
+007E:  MOVF   2B,F
+007F:  BTFSC  03.2
+0080:  GOTO   088
+0081:  MOVF   2B,W
+0082:  SUBLW  64
+0083:  BTFSC  03.2
+0084:  GOTO   088
+0085:  BCF    03.0
+0086:  RLF    2B,W
+0087:  MOVWF  30
+.................... } // si es para nosotros 
+.................... if (Comando[0] == 93) { // si el comando es para este modulo (Luz) 
+0088:  MOVF   2A,W
+0089:  SUBLW  5D
+008A:  BTFSS  03.2
+008B:  GOTO   0A0
+....................    PILOTON; 
+008C:  BSF    03.5
+008D:  BCF    05.6
+008E:  BCF    03.5
+008F:  BCF    05.6
+....................    if (Comando[1] == 80) LUZEXTOFF; 
+0090:  MOVF   2B,W
+0091:  SUBLW  50
+0092:  BTFSS  03.2
+0093:  GOTO   098
+0094:  BSF    03.5
+0095:  BCF    06.6
+0096:  BCF    03.5
+0097:  BCF    06.6
+....................    if (Comando[1] == 90) LUZEXTON; 
+0098:  MOVF   2B,W
+0099:  SUBLW  5A
+009A:  BTFSS  03.2
+009B:  GOTO   0A0
+009C:  BSF    03.5
+009D:  BCF    06.6
+009E:  BCF    03.5
+009F:  BSF    06.6
+.................... } // si es para nosotros 
+.................... } // if checksum 
+.................... } //fn 
+....................  
+....................  
+.................... void Sonar(){ 
+.................... if (VAlarma == 0){ // La alarma esta apagada 
+*
+01FF:  MOVF   30,F
+0200:  BTFSS  03.2
+0201:  GOTO   207
+.................... SIRENAOFF; 
+0202:  BSF    03.5
+0203:  BCF    05.7
+0204:  BCF    03.5
+0205:  BCF    05.7
+.................... } else { // la alarma esta prendida 
+0206:  GOTO   20B
+.................... SIRENAON; 
+0207:  BSF    03.5
+0208:  BCF    05.7
+0209:  BCF    03.5
+020A:  BSF    05.7
+.................... } 
+.................... } // fn 
+020B:  BCF    0A.3
+020C:  GOTO   493 (RETURN)
+....................  
+....................  
+.................... void TomaADC(){ 
+....................  
+.................... set_adc_channel(LUZ); 
+020D:  MOVLW  00
+020E:  MOVWF  78
+020F:  MOVF   1F,W
+0210:  ANDLW  C7
+0211:  IORWF  78,W
+0212:  MOVWF  1F
+.................... LuzExt = read_adc(); 
+0213:  BSF    1F.2
+0214:  BTFSC  1F.2
+0215:  GOTO   214
+0216:  BSF    03.5
+0217:  MOVF   1E,W
+0218:  BCF    03.5
+0219:  MOVWF  31
+021A:  MOVF   1E,W
+021B:  MOVWF  32
+....................  
+.................... set_adc_channel(BATERIA); 
+021C:  MOVLW  20
+021D:  MOVWF  78
+021E:  MOVF   1F,W
+021F:  ANDLW  C7
+0220:  IORWF  78,W
+0221:  MOVWF  1F
+.................... //Vbatt = read_adc(); 
+....................  
+.................... set_adc_channel(TEMP); 
+0222:  MOVLW  10
+0223:  MOVWF  78
+0224:  MOVF   1F,W
+0225:  ANDLW  C7
+0226:  IORWF  78,W
+0227:  MOVWF  1F
+.................... ADCval = read_adc(); 
+0228:  BSF    1F.2
+0229:  BTFSC  1F.2
+022A:  GOTO   229
+022B:  BSF    03.5
+022C:  MOVF   1E,W
+022D:  BCF    03.5
+022E:  MOVWF  4A
+022F:  MOVF   1E,W
+0230:  MOVWF  4B
+.................... TempNew = ADCval; 
+0231:  MOVF   4B,W
+0232:  MOVWF  47
+0233:  MOVF   4A,W
+0234:  MOVWF  46
+....................  
+.................... TempNew = ((TempNew + TempOld) / 2); 
+0235:  MOVF   48,W
+0236:  ADDWF  46,W
+0237:  MOVWF  4C
+0238:  MOVF   47,W
+0239:  MOVWF  4D
+023A:  MOVF   49,W
+023B:  BTFSC  03.0
+023C:  INCFSZ 49,W
+023D:  ADDWF  4D,F
+023E:  BCF    03.0
+023F:  RRF    4D,W
+0240:  MOVWF  47
+0241:  RRF    4C,W
+0242:  MOVWF  46
+.................... TempNew = ((TempNew + TempOld) / 2); 
+0243:  MOVF   48,W
+0244:  ADDWF  46,W
+0245:  MOVWF  4C
+0246:  MOVF   47,W
+0247:  MOVWF  4D
+0248:  MOVF   49,W
+0249:  BTFSC  03.0
+024A:  INCFSZ 49,W
+024B:  ADDWF  4D,F
+024C:  BCF    03.0
+024D:  RRF    4D,W
+024E:  MOVWF  47
+024F:  RRF    4C,W
+0250:  MOVWF  46
+.................... TempNew = ((TempNew + TempOld) / 2); 
+0251:  MOVF   48,W
+0252:  ADDWF  46,W
+0253:  MOVWF  4C
+0254:  MOVF   47,W
+0255:  MOVWF  4D
+0256:  MOVF   49,W
+0257:  BTFSC  03.0
+0258:  INCFSZ 49,W
+0259:  ADDWF  4D,F
+025A:  BCF    03.0
+025B:  RRF    4D,W
+025C:  MOVWF  47
+025D:  RRF    4C,W
+025E:  MOVWF  46
+....................  
+.................... TempOld = TempNew; 
+025F:  MOVF   47,W
+0260:  MOVWF  49
+0261:  MOVF   46,W
+0262:  MOVWF  48
+.................... Tempe = TempOld; 
+0263:  MOVF   49,W
+0264:  MOVWF  38
+0265:  MOVF   48,W
+0266:  MOVWF  37
+....................  
+.................... //set_adc_channel(JUMPER); 
+.................... //Jump = read_adc(); 
+....................  
+.................... //set_adc_channel(FUENTE); 
+.................... //Vf = read_adc(); 
+....................  
+.................... }//fn 
+0267:  BCF    0A.3
+0268:  GOTO   494 (RETURN)
+
+Configuration Fuses:
+   Word  1: 3F3C   WDT NOPUT INTRC_IO MCLR NOBROWNOUT NOLVP NOCPD NOWRT NODEBUG CCPB0 NOPROTECT
+   Word  2: 3FFF   FCMEN IESO

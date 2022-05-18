@@ -1,0 +1,187 @@
+ÀÄmain
+   ÃÄmain  0/270  Ram=1
+   ³  ÃÄ@cinit1  (Inline)  Ram=0
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄ@delay_ms1  0/21  Ram=1
+   ³  ÃÄAccion  0/286  Ram=3
+   ³  ³  ÃÄ@MUL1616  0/21  Ram=5
+   ³  ³  ÃÄ@goto10969  0/16  Ram=0
+   ³  ³  ÀÄ@goto10989  0/16  Ram=0
+   ³  ÀÄEntradas  0/718  Ram=2
+   ³     ÃÄAccion  0/286  Ram=3
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄAccion  0/286  Ram=3
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄAccion  0/286  Ram=3
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄAccion  0/286  Ram=3
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄAccion  0/286  Ram=3
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄAccion  0/286  Ram=3
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄAccion  0/286  Ram=3
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄAccion  0/286  Ram=3
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄAccion  0/286  Ram=3
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄAccion  0/286  Ram=3
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄAccion  0/286  Ram=3
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄAccion  0/286  Ram=3
+   ³     ³  ÀÄ*
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÃÄ@PUTCHAR_BIU_1  0/13  Ram=1
+   ³     ÀÄAccion  0/286  Ram=3
+   ³        ÀÄ*
+   ÃÄCruce  0/9  Ram=0
+   ³  ÀÄAccion  0/286  Ram=3
+   ³     ÀÄ*
+   ÀÄBusData  0/162  Ram=2
+      ÀÄComunica  (Inline)  Ram=2
+         ÃÄ@delay_ms1  0/21  Ram=1
+         ÃÄ@delay_ms1  0/21  Ram=1
+         ÃÄ@delay_ms1  0/21  Ram=1
+         ÃÄ@delay_ms1  0/21  Ram=1
+         ÃÄ@delay_ms1  0/21  Ram=1
+         ÃÄ@delay_ms1  0/21  Ram=1
+         ÃÄ@delay_ms1  0/21  Ram=1
+         ÃÄ@delay_ms1  0/21  Ram=1
+         ÃÄAccion  0/286  Ram=3
+         ³  ÀÄ*
+         ÃÄAccion  0/286  Ram=3
+         ³  ÀÄ*
+         ÀÄAccion  0/286  Ram=3
+            ÀÄ*

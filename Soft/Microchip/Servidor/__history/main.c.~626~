@@ -1,0 +1,4559 @@
+/*======================================================================================================
+||   Proyecto: Casandra v1.0                                                                          ||
+||   Autor: Gonzalo Carvallo (gonzacarv@gmail.com)                                                    ||
+||   Fecha: 07/2014                                                                                   ||
+||   Compilador: PCWHD v5.025 (www.ccsinfo.com)                                                       ||
+||   Fuente: http://                                                                                  ||
+||                                                                                                    ||
+|| Firmware del modulo servidor (display, teclado, sensor de humedad y temperatura) correspondiente   ||
+|| al sistema domotico CASANDRA. Control general con uso intensivo de EEPROM. Comunicacion sobre par  ||
+|| trenzado usando el transceptor SN75176.                                                            ||
+||                                                                                                    ||
+======================================================================================================*/
+
+#include <18f4620.h>
+
+//#byte TMR1H = 0xFCF // Le pongo nombre al registro alto de timer 1
+//#byte TMR1L = 0xFCE // Le pongo nombre al registro bajo de timer 1
+#device ADC=10
+#fuses XT, MCLR, WDT1024 // Opciones de configuración
+//#fuses XT, NOIESO, NOFCMEN, NOPUT, NOPROTECT, NOPBADEN, NOLVP, NOBROWNOUT, MCLR, WDT1024, NOLPT1OSC // Opciones de configuración
+
+#use delay(clock=4000000)  // Reloj de 4MHz
+#use rs232(baud=9600, xmit=PIN_C6, rcv=PIN_C7, enable=PIN_D4, ERRORS) // Comunicacion serial
+
+//#include "DHT11.h"
+#include "FLEX_LCD_164.c"
+#include "DS1307.c"
+//#include <string.h>
+//#include <internal_eeprom.c> 
+
+
+///////////////////// Variables y Funciones para DHT11  ////////////////////////////////
+unsigned char values[5];   // Arreglo de valores (Solo nos sirve 0-temp- y 2-humedad-)
+void DHT11_init();         // Iniciador estabilizador
+unsigned char get_byte();  // Funcion que arma cada byte
+unsigned char get_data();  // Funcion que asigna los valores a los diferentes bytes
+unsigned char state = 0;   // Estado del sensor
+////////////////////////////////////////////////////////////////////////////////////////
+
+
+////// Variables del DS1307 /////
+byte sec;
+byte min;
+byte hrs;
+byte day;
+byte month;
+byte year;
+byte dow;
+/////////////////////////////////
+
+
+///////////////// Definiciones de Pines /////////////////////
+#define DHT11_pin PIN_B5     // Sensor DHT11
+#define LCDLED PIN_D6        // Luz de pantalla led
+#define ARRIBA PIN_B0        // Teclado Arriba
+#define ABAJO  PIN_B1        // Teclado Abajo
+#define OOKK   PIN_B2        // Teclado Ok
+#define CANCEL PIN_B3        // Teclado Cancelar
+#define FA_R 0               // Fase R
+#define FA_S 1               // Fase S
+#define FA_T 2               // Fase T
+#define TempIn values[2]     // Temperatura
+#define Hum values[0]        // Humedad
+
+#define ONLCDLED output_low(PIN_D6)
+#define OFFLCDLED  output_high(PIN_D6)
+#define LIMPIARLCD lcd_putc("\f")
+
+//////////////// Definicion de los sensores y Luces protagonistas /////////////////////////////
+#define SensPasilloCua   44 // Ultimo de modulo 1 (cuartos)
+#define SensEstar        56 // Ultimo de modulo 2 (cuartos)
+#define SensHall         66 // Antepenultimo de modulo 3 (cocina)
+#define SensCocina       67 // Penultimo de modulo 3 (cocina)
+#define SensLiving       68 // Ultimo de modulo 3 (cocina)
+#define SensPasilloLav   79 // Penultimo de modulo 4 (cocina)
+#define SensGarage       80 // Ultimo de modulo 4 (cocina)
+#define SensGaleria1     91 // Penultimo de modulo 5 (galeria)
+#define SensGaleria2     92 // Ultimo de modulo 5 (galeria)
+
+#define LHall       57 // Luz del hall
+#define LCocina     58 // Luz de la cocina
+
+///////////////// Definiciones de posiciones de memoria EEPROM /////////////////
+#define EstAlarma   2        // Estado de la alarma
+#define EstCasandra 3        // Estado de casandra
+#define TpoSil      4        // Tiempo de Alarma Silenciosa (en segundos de 1 a 180)
+#define TpoSal      5        // Tiempo para salir (en segundos de 1 a 180)
+#define Password    6 // y 7 // Puntero de password (OJO!!! es solo el puntero, ocupa 2 bytes de memoria, 6 y 7)
+#define G1On        8        // Horario de encendido del grupo automatico 1
+#define G2On        9        // Horario de encendido del grupo automatico 2
+#define G1Off      10        // Horario de apagado del grupo automatico 1
+#define G2Off      11        // Horario de apagado del grupo automatico 2
+#define G1Dias     12        // Luces integrantes del grupo 1
+#define G2Dias     13        // Luces integrantes del grupo 2
+#define Umbra      14        // Nivel umbral de la fotocelda
+
+#define Luz1 33   // Posiciones de memoria para la intensidad de cada luz
+#define Luz2 34
+#define Luz3 35
+#define Luz4 36
+#define Luz5 37
+#define Luz6 38
+#define Luz7 39
+#define Luz8 40
+#define Luz9 41
+#define Luz10 42
+#define Luz11 43
+#define Luz12 44
+#define Luz13 45
+#define Luz14 46
+#define Luz15 47
+#define Luz16 48
+#define Luz17 49
+#define Luz18 50
+#define Luz19 51
+#define Luz20 52
+#define Luz21 53
+#define Luz22 54
+#define Luz23 55
+#define Luz24 56
+#define Luz25 57
+#define Luz26 58
+#define Luz27 59
+#define Luz28 60
+#define Luz29 61
+#define Luz30 62
+#define Luz31 63
+#define Luz32 64
+#define Luz33 65
+#define Luz34 66
+#define Luz35 67
+#define Luz36 68
+#define Luz37 69
+#define Luz38 70
+#define Luz39 71
+#define Luz40 72
+#define Luz41 73
+#define Luz42 74
+#define Luz43 75
+#define Luz44 76
+#define Luz45 77
+#define Luz46 78
+#define Luz47 79
+#define Luz48 80
+#define Luz49 81
+#define Luz50 82
+#define Luz51 83
+#define Luz52 84
+#define Luz53 85
+#define Luz54 86
+#define Luz55 87
+#define Luz56 88
+#define Luz57 89
+#define Luz58 90
+#define Luz59 91
+#define Luz60 92
+
+//// Posiciones de los registros de maximo y minimo de Temperatura y Radiacion solar /////
+#define TempMaxLun 100        // Temperatura maxima del lunes
+#define TempMaxMar 105        // Temperatura maxima del martes
+#define TempMaxMie 110        // Temperatura maxima del miercoles
+#define TempMaxJue 115        // Temperatura maxima del jueves
+#define TempMaxVie 120        // Temperatura maxima del viernes
+#define TempMaxSab 125        // Temperatura maxima del sabado
+#define TempMaxDom 130        // Temperatura maxima del domingo
+
+#define TempMinLun 135        // Temperatura minima del lunes
+#define TempMinMar 140        // Temperatura minima del martes
+#define TempMinMie 145        // Temperatura minima del miercoles
+#define TempMinJue 150        // Temperatura minima del jueves
+#define TempMinVie 155        // Temperatura minima del viernes
+#define TempMinSab 160        // Temperatura minima del sabado
+#define TempMinDom 165        // Temperatura minima del domingo
+
+#define SolLun 170            // Sol maximo del lunes
+#define SolMar 175            // Sol maximo del martes
+#define SolMie 180            // Sol maximo del miercoles
+#define SolJue 185            // Sol maximo del jueves
+#define SolVie 190            // Sol maximo del viernes
+#define SolSab 195            // Sol maximo del sabado
+#define SolDom 200            // Sol maximo del domingo
+
+#define GrLuz1 233   // Posiciones de memoria para el byte de pertenencia de Grupos de cada GrLuz
+#define GrLuz2 234
+#define GrLuz3 235
+#define GrLuz4 236
+#define GrLuz5 237
+#define GrLuz6 238
+#define GrLuz7 239
+#define GrLuz8 240
+#define GrLuz9 241
+#define GrLuz10 242
+#define GrLuz11 243
+#define GrLuz12 244
+#define GrLuz13 245
+#define GrLuz14 246
+#define GrLuz15 247
+#define GrLuz16 248
+#define GrLuz17 249
+#define GrLuz18 250
+#define GrLuz19 251
+#define GrLuz20 252
+#define GrLuz21 253
+#define GrLuz22 254
+#define GrLuz23 255
+#define GrLuz24 256
+#define GrLuz25 257
+#define GrLuz26 258
+#define GrLuz27 259
+#define GrLuz28 260
+#define GrLuz29 261
+#define GrLuz30 262
+#define GrLuz31 263
+#define GrLuz32 264
+#define GrLuz33 265
+#define GrLuz34 266
+#define GrLuz35 267
+#define GrLuz36 268
+#define GrLuz37 269
+#define GrLuz38 270
+#define GrLuz39 271
+#define GrLuz40 272
+#define GrLuz41 273
+#define GrLuz42 274
+#define GrLuz43 275
+#define GrLuz44 276
+#define GrLuz45 277
+#define GrLuz46 278
+#define GrLuz47 279
+#define GrLuz48 280
+#define GrLuz49 281
+#define GrLuz50 282
+#define GrLuz51 283
+#define GrLuz52 284
+#define GrLuz53 285
+#define GrLuz54 286
+#define GrLuz55 287
+#define GrLuz56 288
+#define GrLuz57 289
+#define GrLuz58 290
+#define GrLuz59 291
+#define GrLuz60 292
+
+///////////////// Funciones Generales ////////////////
+void inicio();     // Configuracion inicial
+void BusData();    // Bus de datos con algo para meter en el comando
+void Comunica();   // Funcion de lectura de puerto serial y armado del comando
+void Teclado();    // Leemos el teclado
+void Pantalla();   // Actualizamos la pantalla
+void Tiempo();     // Funcion para actualizar el tiempo
+void Ambiente();   // Funcion para cargar variables ambientales
+void AcercaDe();   // Acerca de...
+void Holding();    // Pantalla de hold
+void Notificador();// Pantalla del notificador 
+void ActAlarma();  // Activador de alarma
+void LuzOnOff();   // Enciende o apaga la luz
+void LuzGrupo();   // Enciende o apaga grupo de luces
+void LuzInt();     // Configuracion de la intensidad de cada luz
+void Ccasandra();  // Configuracion del nivel de automatico
+void ConfAlarma(); // Configuracion de la alarma
+void ADias();      // Funcion de seleccion de dias en grupos automaticos
+void AHs();        // Funcion de horarios de grupos automaticos
+void Aluces();     // Funcion de seleccion de luces para los grupos automaticos
+int  Autenticar(); // Chequeo de contraseña, devuelve 1 si es correcta y 0 si no
+void CClave();     // Funcion para cambiar la clave
+void CHs();        // Funcion para cambiar la hora
+void CReset();     // Resetea todas las variables del sistema
+void ConfAlarma(); // Configuracion de alarma
+void Fotocel();    // Configuracion del umbral de la fotocelula
+void VerTemp();    // Donde vemos las temperaturas
+void VerTens();    // Donde vemos las tensiones del sistema
+void DosVeinte();  // Captura ADC para la tension trifasica
+void Defini();     // Definiciones de Teclas y consumos
+
+
+/////////////// Variables globales ///////////////
+int Menu;          // Posicion dentro del menu
+int TempMax[4];    // Temperatura maxima del dia - numero de dia - hora - minuto (el "dow" se interpreta por la posicion de memoria EEPROM)
+int TempMin[4];    // Temperatura minima del dia - numero de dia - hora - minuto (el "dow" se interpreta por la posicion de memoria EEPROM)
+int SolMax[4];     // Maximo nivel de radiacion de sol del dia - dia - hora - minuto (el "dow" se interpreta por la posicion de memoria EEPROM)
+short Rebote;      // Antirebote de teclado
+int Comando[4];    // Carga de EVENTO y VALOR
+int i=0;           // Contador puntero para armar el comando recibido por el bus
+char Dia[4];       // Cadena del dia
+char Mes[4];       // Cadena del Mes
+int TempOut;       // Temperatura remota (afuera)
+int Sol;           // Intensidad del sol (remota, afuera)
+int EstadoAl;      // Estado de la alarma
+int ConfCas;       // El bit 0 es servicios, el 1 es el automatico1, el 2 el automatico2, el 3 es el modulo web y el 4 el control telefonico los demas de reserva
+int Umbral;        // Nivel seleccionado de fotocelda
+int Tiempo1;       // Tiempo del timer1
+int IntLuz[99];    // Arreglo que guarda los niveles de intensidad de cada luz
+int LGrupo[99];    // Arreglo que avisa que luz forma parte de los dos grupos automaticos
+int LLuces[99];    // Arreglo que avisa que luz forma parte de los diferentes tipos de luces
+int LTecla[99];    // Arreglo que avisa que es: Tecla, sensor interno, o externo
+int Passwd[2];     // Contraseña en RAM
+int TpoSilencioso; // Tiempo de silencio antes de sirena
+int TpoSalida;     // Tiempo de gracia post activacion para salir
+int GOn[3];        // Hora de encendido de los automaticos
+int GOff[3];       // Hora de apagado de los automaticos
+int Gdias[3];      // Grupo de dias de los automaticos
+int Vbata;         // Tension de la bateria
+int FaseR;         // Tension en fase R
+int FaseS;         // Tension en fase S
+int FaseT;         // Tension en fase T
+
+//////////////////////////////////////////////////
+
+void main(){
+
+inicio();
+
+/* BORRAR datos de temperaturas de la semana
+int elimin;
+for (elimin=95;elimin<230;elimin++){
+write_eeprom(elimin,0x00);
+}
+*/
+
+if (input(ARRIBA)==0 && input(ABAJO)==0 ) { // && input(OOKK)==0 && input(CANCEL)==0){
+long elimina;
+for (elimina=0;elimina<1024;elimina++){
+write_eeprom(elimina,0x00);
+}
+}
+
+while(1){
+
+restart_wdt(); // reiniciamos el perro
+
+Teclado();
+Pantalla();
+
+if (menu == 0) OFFLCDLED;
+else ONLCDLED;
+
+if (EstadoAl == 1){ // Si la alarma esta desactivada
+// Cool! Nada por aqui :P
+} else { // La alarma esta activada
+if (Menu > 1){
+if (Autenticar()) { //autentica ok
+EstadoAl = 1; // desactivada
+write_eeprom(EstAlarma,EstadoAl);
+Menu = 1;
+} else { // no autentica
+Menu = 0;
+} // no autentica
+} // Menu mas que 1
+} // Alarma activada
+
+if ((Menu == 121) || (Menu == 122) || (Menu == 123)) ActAlarma();
+if (Menu == 124) ConfAlarma();
+if (Menu == 131) LuzOnOff();
+if (Menu == 132) LuzGrupo();
+if (Menu == 133) LuzInt();
+if (Menu == 41) Ccasandra();
+if (Menu == 151) ADias();
+if (Menu == 152) AHs();
+if (Menu == 153) Aluces();
+if (Menu == 161) CClave();
+if (Menu == 162) CHs();
+if (Menu == 163) Fotocel();
+if (Menu == 164) CReset();
+if (Menu == 165) AcercaDe();
+
+//OFFLCDLED;
+} //while
+} // Main
+
+void Defini(){
+//// Definicion de consumos /////
+// bits --> 0:NC (todos) // 1:Interior // 2:Exterior // 3:Jardin // 4:Frente // 5:Pasillos // 6 y 7: NC
+LLuces[33] = 0b00000000;
+LLuces[34] = 0b00000000;
+LLuces[35] = 0b00000000;
+LLuces[36] = 0b00000000;
+LLuces[37] = 0b00000000;
+LLuces[38] = 0b00000000;
+LLuces[39] = 0b00000000;
+LLuces[40] = 0b00000000;
+LLuces[41] = 0b00000000;
+LLuces[42] = 0b00000000;
+LLuces[43] = 0b00000000;
+LLuces[44] = 0b00000000;
+LLuces[45] = 0b00000000;
+LLuces[46] = 0b00000000;
+LLuces[47] = 0b00000000;
+LLuces[48] = 0b00000000;
+LLuces[49] = 0b00000000;
+LLuces[50] = 0b00000000;
+LLuces[51] = 0b00000000;
+LLuces[52] = 0b00000000;
+LLuces[53] = 0b00000000;
+LLuces[54] = 0b00000000;
+LLuces[55] = 0b00000000;
+LLuces[56] = 0b00000000;
+LLuces[57] = 0b00000000;
+LLuces[58] = 0b00000000;
+LLuces[59] = 0b00000000;
+LLuces[60] = 0b00000000;
+LLuces[61] = 0b00000000;
+LLuces[62] = 0b00000000;
+LLuces[63] = 0b00000000;
+LLuces[64] = 0b00000000;
+LLuces[65] = 0b00000000;
+LLuces[66] = 0b00000000;
+LLuces[67] = 0b00000000;
+LLuces[68] = 0b00000000;
+LLuces[69] = 0b00000000;
+LLuces[70] = 0b00000000;
+LLuces[71] = 0b00000000;
+LLuces[72] = 0b00000000;
+LLuces[73] = 0b00000000;
+LLuces[74] = 0b00000000;
+LLuces[75] = 0b00000000;
+LLuces[76] = 0b00000000;
+LLuces[77] = 0b00000000;
+LLuces[78] = 0b00000000;
+LLuces[79] = 0b00000000;
+LLuces[80] = 0b00000000;
+LLuces[81] = 0b00000000;
+LLuces[82] = 0b00000000;
+LLuces[83] = 0b00000000;
+LLuces[84] = 0b00000000;
+LLuces[85] = 0b00000000;
+LLuces[86] = 0b00000000;
+LLuces[87] = 0b00000000;
+LLuces[88] = 0b00000000;
+LLuces[89] = 0b00000000;
+LLuces[90] = 0b00000000;
+LLuces[91] = 0b00000000;
+LLuces[92] = 0b00000000;
+
+//// Definicion de teclas /////
+// bits --> 0:Tecla cuartos // 1:Tecla casa // 2:Tecla exterior // 3:Sensor cuartos // 4:Sensor casa // 5:Sensor exterior // 6 y 7: NC
+LTecla[33] = 0b00000000;
+LTecla[34] = 0b00000000;
+LTecla[35] = 0b00000000;
+LTecla[36] = 0b00000000;
+LTecla[37] = 0b00000000;
+LTecla[38] = 0b00000000;
+LTecla[39] = 0b00000000;
+LTecla[40] = 0b00000000;
+LTecla[41] = 0b00000000;
+LTecla[42] = 0b00000000;
+LTecla[43] = 0b00000000;
+LTecla[44] = 0b00000000;
+LTecla[45] = 0b00000000;
+LTecla[46] = 0b00000000;
+LTecla[47] = 0b00000000;
+LTecla[48] = 0b00000000;
+LTecla[49] = 0b00000000;
+LTecla[50] = 0b00000000;
+LTecla[51] = 0b00000000;
+LTecla[52] = 0b00000000;
+LTecla[53] = 0b00000000;
+LTecla[54] = 0b00000000;
+LTecla[55] = 0b00000000;
+LTecla[56] = 0b00000000;
+LTecla[57] = 0b00000000;
+LTecla[58] = 0b00000000;
+LTecla[59] = 0b00000000;
+LTecla[60] = 0b00000000;
+LTecla[61] = 0b00000000;
+LTecla[62] = 0b00000000;
+LTecla[63] = 0b00000000;
+LTecla[64] = 0b00000000;
+LTecla[65] = 0b00000000;
+LTecla[66] = 0b00000000;
+LTecla[67] = 0b00000000;
+LTecla[68] = 0b00000000;
+LTecla[69] = 0b00000000;
+LTecla[70] = 0b00000000;
+LTecla[71] = 0b00000000;
+LTecla[72] = 0b00000000;
+LTecla[73] = 0b00000000;
+LTecla[74] = 0b00000000;
+LTecla[75] = 0b00000000;
+LTecla[76] = 0b00000000;
+LTecla[77] = 0b00000000;
+LTecla[78] = 0b00000000;
+LTecla[79] = 0b00000000;
+LTecla[80] = 0b00000000;
+LTecla[81] = 0b00000000;
+LTecla[82] = 0b00000000;
+LTecla[83] = 0b00000000;
+LTecla[84] = 0b00000000;
+LTecla[85] = 0b00000000;
+LTecla[86] = 0b00000000;
+LTecla[87] = 0b00000000;
+LTecla[88] = 0b00000000;
+LTecla[89] = 0b00000000;
+LTecla[90] = 0b00000000;
+LTecla[91] = 0b00000000;
+LTecla[92] = 0b00000000;
+}  // fn definiciones
+
+
+void VerTemp() {   // visor de temperaturas historicas de la semana
+
+LIMPIARLCD;
+restart_wdt();
+int dia = 1;
+int Tmax[4];  // 0 es dow, 1 es grados, 2 es hora y 3 es minuto
+int Tmin[4];  // 0 es dow, 1 es grados, 2 es hora y 3 es minuto
+int Solc[4];  // 0 es dow, 1 es radiacion, 2 es hora y 3 es minuto
+char DDow[8]; // Leyenda de lo que estamos visualizando
+
+int falsodow;
+
+while (dia != 0){ // 
+restart_wdt();
+
+falsodow = dow - (dia - 1);
+if ((falsodow == 0) || (falsodow > 7)) falsodow = falsodow + 7;
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == false){
+if (input(CANCEL) == 0){ // si cancel solo resto o salgo con 10
+dia = 0;
+Rebote = true;
+} // si cancel
+}
+
+if (Rebote == false){
+if (input(ARRIBA) == 0){ // si arriba
+Rebote = true;
+++dia;
+if (dia == 8) dia = 7;
+} // si abajo
+} // si rebote
+
+if (Rebote == false){
+if (input(ABAJO) == 0){ // si abajo
+Rebote = true;
+--dia;
+} // si abajo
+} // si rebote
+
+lcd_gotoxy(1,1);
+printf(lcd_putc, "== Max/Min de%s", DDow);
+//printf(lcd_putc, "= falsodow : %u", falsodow);
+lcd_gotoxy(1,2);
+printf(lcd_putc, "Maxima: %2d%cC (%02d:%02d)", Tmax[1], 210, Tmax[2], Tmax[3]);
+lcd_gotoxy(1,3);
+printf(lcd_putc, "Minima: %2d%cC (%02d:%02d)", Tmin[1], 210, Tmin[2], Tmin[3]);
+lcd_gotoxy(1,4);
+printf(lcd_putc, "Sol max:%3u  (%02d:%02d)", Solc[1], Solc[2], Solc[3]);
+
+long puntero;
+puntero = (long) ((falsodow * 5) + 95);
+Tmax[1] = read_eeprom(puntero);
+puntero = (long) ((falsodow * 5) + 97);
+Tmax[2] = read_eeprom(puntero);
+puntero = (long) ((falsodow * 5) + 98);
+Tmax[3] = read_eeprom(puntero);
+
+puntero = (long) ((falsodow * 5) + 130);
+Tmin[1] = read_eeprom(puntero);
+puntero = (long) ((falsodow * 5) + 132);
+Tmin[2] = read_eeprom(puntero);
+puntero = (long) ((falsodow * 5) + 133);
+Tmin[3] = read_eeprom(puntero);
+
+puntero = (long) ((falsodow * 5) + 165);
+Solc[1] = read_eeprom(puntero);
+puntero = (long) ((falsodow * 5) + 167);
+Solc[2] = read_eeprom(puntero);
+puntero = (long) ((falsodow * 5) + 168);
+Solc[3] = read_eeprom(puntero);
+
+switch (falsodow){
+   case 1: // Hoy
+   DDow = " Lun ==";
+   break;
+
+   case 2: // Ayer
+   DDow = " Mar ==";
+   break;
+
+   case 3: // 
+   DDow = " Mier =";
+   break;
+
+   case 4: // 
+   DDow = " Jue ==";
+   break;
+
+   case 5: //
+   DDow = " Vie ==";
+   break;
+
+   case 6: //
+   DDow = " Sab ==";
+   break;
+
+   case 7: //
+   DDow = " Dom ==";
+   break;
+} // switch
+
+if (falsodow == dow) DDow = " Hoy ==";
+
+} // while
+while (input(ABAJO)==0){
+Rebote = true;
+Menu = 1;
+}
+//delay_ms(50);
+} // fn
+
+
+void DosVeinte(){  // Toma de lectura analogica de la tension 220
+
+restart_wdt();
+float Rr;
+float Ss;
+float Tt;
+
+long Tensiones[3];
+
+set_adc_channel(FA_R);
+Tensiones[0] = read_adc();
+Rr = (float) (Tensiones[0]/3.41);
+FaseR = Rr;
+
+set_adc_channel(FA_S);
+Tensiones[1] = read_adc();
+Ss = (float) (Tensiones[1]/3.41);
+FaseS = Ss;
+
+set_adc_channel(FA_T);
+Tensiones[2] = read_adc();
+Tt = (float) (Tensiones[2]/3.41);
+FaseT = Tt;
+
+}//fn
+
+
+void VerTens() { // funcion de muestra de tensiones
+LIMPIARLCD;
+short dentro = True;
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == false){
+
+while (dentro){
+
+restart_wdt();
+lcd_gotoxy(1,1);
+printf(lcd_putc, "=== Tensiones(V) ===");
+lcd_gotoxy(1,2);
+printf(lcd_putc, " (R) // (S) // (T)  ");
+lcd_gotoxy(1,3);
+printf(lcd_putc, " %uv ", FaseR);
+lcd_gotoxy(8,3);
+printf(lcd_putc, " %uv ", FaseS);
+lcd_gotoxy(15,3);
+printf(lcd_putc, " %uv ", FaseT);
+lcd_gotoxy(1,4);
+printf(lcd_putc, "   Bateria: %3.1wv   ", Vbata);
+if (input(ARRIBA)==0 || input(OOKK)==0 || input(CANCEL)==0) {
+dentro = false;
+Rebote = true;
+} // si cancel
+} // while
+} // if
+} // fn
+
+void Fotocel() { // Configuracion del Umbral de la fotocelda
+
+LIMPIARLCD;
+restart_wdt();
+int submenu = 0;
+int umbrr;
+umbrr = Umbral;
+
+while (submenu < 1){ // hasta llenar todo
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == false){
+if (input(OOKK) == 0){ // si ok, solo sumo
+submenu = 1;
+Rebote = true;
+} // si ok
+}
+
+if (Rebote == false){
+if (input(CANCEL) == 0){ // si cancel solo resto o salgo con 10
+submenu = 2;
+Rebote = true;
+} // si cancel
+}
+
+if (Rebote == false){
+if (input(ABAJO) == 0){ // si abajo
+Rebote = true;
+umbrr = umbrr + 5;
+if (umbrr > 100) umbrr = 100;
+} // si abajo
+} // si rebote
+
+if (Rebote == false){
+if (input(ARRIBA) == 0){ // si arriba
+Rebote = true;
+umbrr = umbrr - 5;
+if (umbrr > 100) umbrr = 0;
+} // si abajo
+} // si rebote
+
+lcd_gotoxy(1,1);
+printf(lcd_putc, "= Conf. Fotocelula =");
+lcd_gotoxy(1,2);
+printf(lcd_putc, "Seleccione el nivel ");
+lcd_gotoxy(1,3);
+printf(lcd_putc, "del umbral de Sol:  ");
+lcd_gotoxy(1,4);
+//if (submenu == 0){
+if (bit_test(tiempo1,0)) printf(lcd_putc, "      -~%3u%%        ", umbrr);
+else printf(lcd_putc, "      -~   %%        ");
+//}
+restart_wdt();
+} // while
+
+if (submenu == 1) { // salimos con OK
+Umbral = umbrr;
+write_eeprom(Umbra,Umbral);
+Menu = 1;
+}
+if (submenu == 2) { // salimos con CANCEL
+//Umbral = umbrr;
+Menu = 63;
+}
+} // fn
+
+void ALuces(){ // Que luces perteneces a Auto 1 y Auto 2, en LGrupo[] son bits 6 y 7
+
+LIMPIARLCD;
+int submenu = 33;
+int grupo = 0;
+char Gr1[3];
+char Gr2[3];
+
+while (submenu < 95){ // 
+
+restart_wdt();
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == false){
+if (input(OOKK) == 0){ 
+++grupo;
+if (grupo == 3) grupo = 0;
+rebote = true;
+}//si ok
+}//rebote
+
+if (Rebote == false){
+if (input(CANCEL) == 0){ 
+--grupo;
+if (grupo == 255) {
+Menu = 53;
+submenu = 100;
+}
+rebote = true;
+}// si cancel
+}//rebote
+
+if (Rebote == false){
+if (input(ARRIBA) == 0) { // apretamos arriba, entonces resto numero de luz
+
+if (grupo == 0) {
+--submenu;
+if (submenu == 32) submenu = 92;
+long puntero;
+puntero = (long) submenu + 200;
+LGrupo[submenu] = read_eeprom(puntero);
+}
+
+if (grupo == 1) {
+if (bit_test(LGrupo[submenu],6)) {
+bit_clear(LGrupo[submenu],6);
+//Gr1= "NO";
+} else {
+bit_set(LGrupo[submenu],6);
+//Gr1= "SI";
+}
+long puntero;
+puntero = (long) submenu+200;
+write_eeprom(puntero,LGrupo[submenu]);
+}
+
+if (grupo == 2) {
+if (bit_test(LGrupo[submenu],7)) {
+bit_clear(LGrupo[submenu],7);
+//Gr2= "NO";
+} else {
+bit_set(LGrupo[submenu],7);
+//Gr2= "SI";
+}
+long puntero;
+puntero = (long) submenu+200;
+write_eeprom(puntero,LGrupo[submenu]);
+}
+
+rebote = true;
+} // si arriba
+}//rebote
+
+if (Rebote == false){
+if (input(ABAJO) == 0) { // apretamos arriba, entonces resto numero de luz
+
+if (grupo == 0) {
+++submenu;
+if (submenu == 93) submenu = 33;
+long puntero;
+puntero = (long) submenu + 200;
+LGrupo[submenu] = read_eeprom(puntero);
+}
+
+if (grupo == 1) {
+if (bit_test(LGrupo[submenu],6)) {
+bit_clear(LGrupo[submenu],6);
+//Gr1= "NO";
+} else {
+bit_set(LGrupo[submenu],6);
+//Gr1= "SI";
+}
+long puntero;
+puntero = (long) submenu+200;
+write_eeprom(puntero,LGrupo[submenu]);
+}
+
+if (grupo == 2) {
+if (bit_test(LGrupo[submenu],7)) {
+bit_clear(LGrupo[submenu],7);
+//Gr2= "NO";
+} else {
+bit_set(LGrupo[submenu],7);
+//Gr2= "SI";
+}
+long puntero;
+puntero = (long) submenu+200;
+write_eeprom(puntero,LGrupo[submenu]);
+}
+
+rebote = true;
+} // si arriba
+}//rebote
+
+/////////////////////// LCD ///////////////////////
+if (bit_test(LGrupo[submenu],6)) Gr1 = "SI";
+else Gr1 = "NO";
+if (bit_test(LGrupo[submenu],7)) Gr2 = "SI";
+else Gr2 = "NO";
+
+lcd_gotoxy(1,1);
+printf(lcd_putc, "= Luces Automatic. =");
+
+lcd_gotoxy(1,2);
+if (grupo == 0){ // si grupo 0
+if (bit_test(tiempo1,0)) printf(lcd_putc, "Luz #%02u pertenece a:",(submenu-32));
+else printf(lcd_putc, "Luz     pertenece a:");
+} else printf(lcd_putc, "Luz #%02u pertenece a:",(submenu-32));
+
+lcd_gotoxy(1,3);
+if (grupo == 1){ // si grupo 1
+if (bit_test(tiempo1,0)) printf(lcd_putc, "Grupo Auto (1): -%s-",Gr1);
+else printf(lcd_putc, "Grupo Auto (1): -  -");
+} else printf(lcd_putc, "Grupo Auto (1): -%s-",Gr1);
+
+lcd_gotoxy(1,4);
+if (grupo == 2){ // si grupo 2
+if (bit_test(tiempo1,0)) printf(lcd_putc, "Grupo Auto (2): -%s-",Gr2);
+else printf(lcd_putc, "Grupo Auto (2): -  -");
+} else printf(lcd_putc, "Grupo Auto (2): -%s-",Gr2);
+
+restart_wdt();
+
+} // while
+} // fn
+
+
+void AHs(){  // horario de los grupos automaticos
+
+LIMPIARLCD;
+int submenu = 1;
+int grupo = 1;
+//GOn[2]
+//GOff[2]
+
+while (submenu < 5){ // 
+
+restart_wdt();
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == false){
+if (input(OOKK) == 0){ 
+++submenu;
+if (submenu == 4){ 
+// Grabamos en eeprom
+//write_eeprom(G1Dias,Gdias[1]);
+Menu = 52;
+submenu = 100;
+}
+rebote = true;
+}//si ok
+}//rebote
+
+if (Rebote == false){
+if (input(CANCEL) == 0){ 
+--submenu;
+if (submenu == 0){ 
+Menu = 52;
+submenu = 100;
+}
+rebote = true;
+}//si ok
+}//rebote
+
+if (Rebote == false){
+if (input(ARRIBA) == 0) { // apretamos arriba
+
+   if (submenu == 1) { // elegir grupo
+      if (grupo == 1) grupo = 2;
+      else grupo = 1;
+   } 
+   
+   if (submenu == 2) { // hora de ON
+     --GOn[grupo];
+     if (GOn[grupo] > 24) GOn[grupo] = 24;
+   }
+   
+   if (submenu == 3) { // hora de OFF
+     --GOff[grupo];
+     if (GOff[grupo] > 24) GOff[grupo] = 24;
+   }
+rebote = true;
+write_eeprom(G1On,GOn[1]);
+delay_ms(2);
+write_eeprom(G2On,GOn[2]);
+delay_ms(2);
+write_eeprom(G1Off,GOff[1]);
+delay_ms(2);
+write_eeprom(G2Off,GOff[2]);
+delay_ms(2);
+} // si arriba 
+}//rebote
+
+if (Rebote == false){
+if (input(ABAJO) == 0) { // apretamos arriba
+
+   if (submenu == 1) { // elegir grupo
+      if (grupo == 1) grupo = 2;
+      else grupo = 1;
+   } 
+   
+   if (submenu == 2) { // hora de ON
+     ++GOn[grupo];
+     if (GOn[grupo] > 24) GOn[grupo] = 0;
+   }
+   
+   if (submenu == 3) { // hora de OFF
+     ++GOff[grupo];
+     if (GOff[grupo] > 24) GOff[grupo] = 0;
+   }
+rebote = true;
+write_eeprom(G1On,GOn[1]);
+delay_ms(2);
+write_eeprom(G2On,GOn[2]);
+delay_ms(2);
+write_eeprom(G1Off,GOff[1]);
+delay_ms(2);
+write_eeprom(G2Off,GOff[2]);
+delay_ms(2);
+} // si abajo 
+}//rebote
+
+
+/////////////////////// LCD ///////////////////////
+lcd_gotoxy(1,1);
+printf(lcd_putc, "=====  Horario =====");
+lcd_gotoxy(1,2);
+if (submenu == 1) { // estamos en grupo
+if (grupo == 1){ // si grupo 1
+if (bit_test(tiempo1,0)) printf(lcd_putc, "  Grupo:  AUTO (1)  ");
+else printf(lcd_putc, "  Grupo:            ");
+} // si el grupo es 1
+if (grupo == 2){ // si grupo 2
+if (bit_test(tiempo1,0)) printf(lcd_putc, "  Grupo:  AUTO (2)  ");
+else printf(lcd_putc, "  Grupo:            ");
+} // si el grupo es 2
+} // grupo
+else {
+if (grupo == 1) {
+printf(lcd_putc, "  Grupo:  AUTO (1)  ");
+} else printf(lcd_putc, "  Grupo:  AUTO (2)  ");
+}
+
+lcd_gotoxy(1,3);
+if (submenu == 2) { // Configurando el horario de encendido
+if (bit_test(tiempo1,0)) {
+if (GOn[grupo] == 24) printf(lcd_putc, " Encendido: Fotocel ");
+else printf(lcd_putc, " Encendido: %02u hs   ",GOn[grupo]);
+} else printf(lcd_putc, " Encendido:         ");
+} else {
+if (GOn[grupo] == 24) printf(lcd_putc, " Encendido: Fotocel ");
+else printf(lcd_putc, " Encendido: %02u hs   ",GOn[grupo]);
+}
+
+lcd_gotoxy(1,4);
+if (submenu == 3) { // Configurando el horario de apagado
+if (bit_test(tiempo1,0)) {
+if (GOff[grupo] == 24) printf(lcd_putc, " Apagado: Fotocelda ");
+else printf(lcd_putc, " Apagado: %02u hs     ",GOff[grupo]);
+} else printf(lcd_putc, " Apagado:           ");
+} else {
+if (GOff[grupo] == 24) printf(lcd_putc, " Apagado: Fotocelda ");
+else printf(lcd_putc, " Apagado: %02u hs     ",GOff[grupo]);
+}
+restart_wdt();
+} // while
+} // fn
+
+
+void ADias(){
+
+LIMPIARLCD;
+char Lun[4];
+char Mar[4];
+char Mie[5];
+char Jue[4];
+char Vie[4];
+char Sab[4];
+char Dom[4];
+
+int submenu = 0;
+int grupo = 1;
+
+while (submenu < 9){ // hasta llenar todas las luces
+
+if (grupo == 1) {
+if (bit_test(Gdias[1],1)){ // Lunes grupo 1 verdadero
+Lun = "Lun";
+} else { // Lunes es falso
+Lun = " X ";
+} // Lunes falso
+if (bit_test(Gdias[1],2)){ // Martes grupo 1 verdadero
+Mar = "Mar";
+} else { // Lunes es falso
+Mar = " X ";
+} // Lunes falso
+if (bit_test(Gdias[1],3)){ // Miercoles grupo 1 verdadero
+Mie = "Mier";
+} else { // Lunes es falso
+Mie = " X  ";
+} // Lunes falso
+if (bit_test(Gdias[1],4)){ // Jueves grupo 1 verdadero
+Jue = "Jue";
+} else { // Lunes es falso
+Jue = " X ";
+} // Lunes falso
+if (bit_test(Gdias[1],5)){ // Viernes grupo 1 verdadero
+Vie = "Vie";
+} else { // Lunes es falso
+Vie = " X ";
+} // Lunes falso
+if (bit_test(Gdias[1],6)){ // Sabado grupo 1 verdadero
+Sab = "Sab";
+} else { // Lunes es falso
+Sab = " X ";
+} // Lunes falso
+if (bit_test(Gdias[1],7)){ // Domingo grupo 1 verdadero
+Dom = "Dom";
+} else { // Lunes es falso
+Dom = " X ";
+} // Lunes falso
+} // grupo es 1
+
+if (grupo == 2) {
+if (bit_test(Gdias[2],1)){ // Lunes grupo 1 verdadero
+Lun = "Lun";
+} else { // Lunes es falso
+Lun = " X ";
+} // Lunes falso
+if (bit_test(Gdias[2],2)){ // Martes grupo 1 verdadero
+Mar = "Mar";
+} else { // Lunes es falso
+Mar = " X ";
+} // Lunes falso
+if (bit_test(Gdias[2],3)){ // Miercoles grupo 1 verdadero
+Mie = "Mier";
+} else { // Lunes es falso
+Mie = " X  ";
+} // Lunes falso
+if (bit_test(Gdias[2],4)){ // Jueves grupo 1 verdadero
+Jue = "Jue";
+} else { // Lunes es falso
+Jue = " X ";
+} // Lunes falso
+if (bit_test(Gdias[2],5)){ // Viernes grupo 1 verdadero
+Vie = "Vie";
+} else { // Lunes es falso
+Vie = " X ";
+} // Lunes falso
+if (bit_test(Gdias[2],6)){ // Sabado grupo 1 verdadero
+Sab = "Sab";
+} else { // Lunes es falso
+Sab = " X ";
+} // Lunes falso
+if (bit_test(Gdias[2],7)){ // Domingo grupo 1 verdadero
+Dom = "Dom";
+} else { // Lunes es falso
+Dom = " X ";
+} // Lunes falso
+} // grupo es 2
+
+if (bit_test(tiempo1,0)) {
+switch (submenu){
+   case 1:
+      Lun = "   ";
+   break;
+   
+   case 2:
+      Mar = "   ";
+   break;
+   
+   case 3:
+      Mie = "    ";
+   break;
+   
+   case 4:
+      Jue = "   ";
+   break;
+   
+   case 5:
+      Vie = "   ";
+   break;
+   
+   case 6:
+      Sab = "   ";
+   break;
+   
+   case 7:
+      Dom = "   ";
+   break;
+} //sw
+} // bit test
+
+restart_wdt();
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == false){
+if (input(OOKK) == 0){ 
+++submenu;
+if (submenu == 8){ 
+// Grabamos en eeprom
+write_eeprom(G1Dias,Gdias[1]);
+write_eeprom(G2Dias,Gdias[2]);
+Menu = 51;
+submenu = 100;
+}
+rebote = true;
+}//si ok
+}//rebote
+
+if (Rebote == false){
+if (input(CANCEL) == 0){ 
+--submenu;
+if (submenu == 255){ 
+Menu = 51;
+submenu = 100;
+}
+rebote = true;
+}//si ok
+}//rebote
+
+if (Rebote == false){
+if ((input(ARRIBA) == 0) || (input(ABAJO) == 0)){ // apretamos arriba o abajo
+
+   if (submenu == 0) {
+      if (grupo == 1) grupo = 2;
+      else grupo = 1;
+   } else { // submenu entre 1 y 7
+
+      if (grupo == 1) { // estamos en el grupo 1
+      if (bit_test(Gdias[grupo],submenu)){ // el dia es verdadero
+      bit_clear(Gdias[grupo],submenu);
+      } // si chequeo 
+      else { // el dia es falso
+      bit_set(Gdias[grupo],submenu);
+      }
+      } // estamos en grupo 1
+ 
+      if (grupo == 2){
+      if (bit_test(Gdias[grupo],submenu)){ // el dia es verdadero
+      bit_clear(Gdias[grupo],submenu);
+      } // si chequeo 
+      else { // el dia es falso
+      bit_set(Gdias[grupo],submenu);
+      }
+      } // si grupo 2
+   } // submenu entre 1 y 7   
+
+rebote = true;
+} // si arriba o abajo
+}//rebote
+
+/////////////////////// LCD ///////////////////////
+lcd_gotoxy(1,1);
+printf(lcd_putc, "= Seleccionar dias =");
+lcd_gotoxy(1,2);
+if (submenu == 0) { // estamos en grupo
+if (grupo == 1){ // si grupo 1
+if (bit_test(tiempo1,0)) printf(lcd_putc, "  Grupo:  AUTO (1)  ");
+else printf(lcd_putc, "  Grupo:            ");
+} // si el grupo es 1
+if (grupo == 2){ // si grupo 2
+if (bit_test(tiempo1,0)) printf(lcd_putc, "  Grupo:  AUTO (2)  ");
+else printf(lcd_putc, "  Grupo:            ");
+} // si el grupo es 2
+} // grupo
+else { // Estamos en los dias de la semana
+if (grupo == 1) {
+printf(lcd_putc, "  Grupo:  AUTO (1)  ");
+} else printf(lcd_putc, "  Grupo:  AUTO (2)  ");
+}
+lcd_gotoxy(1,3);
+printf(lcd_putc, "%s-%s-%s-%s-%s",Lun,Mar,Mie,Jue,Vie);
+lcd_gotoxy(1,4);
+printf(lcd_putc, "      %s-%s       ",Sab,Dom);
+restart_wdt();
+} // while
+} // fn
+
+
+
+void LuzGrupo(){
+
+LIMPIARLCD;
+int submenu = 1;
+//short editar = false;
+//int ON[8];
+//ON[1] = ON[2] = ON[3] = ON[4] = ON[5] = ON[6] = ON[7] = 0;
+int kk;
+
+//submenu = 2;
+//ON[2] = 1;
+
+while (submenu < 50){ // hasta llenar todas las luces
+
+restart_wdt();
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == false){
+if (input(OOKK) == 0){ 
+switch (submenu){
+   
+   case 11:  // Grupo APAGAR TODOS
+      for (kk=32;kk<94;kk++) {
+      if (IntLuz[kk] > 99){ // estaba apagado
+         IntLuz[kk] = IntLuz[kk] - 100; // prendo en el arreglo
+         write_eeprom(kk,IntLuz[kk]);
+         delay_ms(1);
+      } // si estaba apagado..
+      } // for...
+      printf("%c%c%c%c", 250, 100, 80, 180); // Apagamos todo en la red
+   break;
+
+   case 12:  // Grupo APAGAR INTERIOR 
+      for (kk=32;kk<94;kk++) {
+      if (bit_test(LGrupo[kk],1)){ // si pertenece al grupo
+      if (IntLuz[kk] > 99){ // estaba prendido
+         IntLuz[kk] = IntLuz[kk] - 100; // apago en el arreglo en RAM
+         write_eeprom(kk,IntLuz[kk]); // apago en el arreglo en ROM
+         delay_ms(5);
+         printf("%c%c%c%c", 250, kk, 80, kk+80); // Apagamos  en la red
+      } // si estaba prendido..
+      } // si pertenece al grupo
+      } // for...
+   break;
+
+   case 13: // Grupo APAGAR EXTERIOR 
+      for (kk=32;kk<94;kk++) {
+      if (bit_test(LGrupo[kk],2)){ // si pertenece al grupo
+      if (IntLuz[kk] > 99){ // estaba prendido
+         IntLuz[kk] = IntLuz[kk] - 100; // apago en el arreglo en RAM
+         write_eeprom(kk,IntLuz[kk]); // apago en el arreglo en ROM
+         delay_ms(5);
+         printf("%c%c%c%c", 250, kk, 80, kk+80); // Apagamos  en la red
+      } // si estaba prendido..
+      } // si pertenece al grupo
+      } // for...
+   break;
+
+   case 14: // Grupo APAGAR JARDIN 
+      for (kk=32;kk<94;kk++) {
+      if (bit_test(LGrupo[kk],3)){ // si pertenece al grupo
+      if (IntLuz[kk] > 99){ // estaba prendido
+         IntLuz[kk] = IntLuz[kk] - 100; // apago en el arreglo en RAM
+         write_eeprom(kk,IntLuz[kk]); // apago en el arreglo en ROM
+         delay_ms(5);
+         printf("%c%c%c%c", 250, kk, 80, kk+80); // Apagamos  en la red
+      } // si estaba prendido..
+      } // si pertenece al grupo
+      } // for...
+   break;
+
+   case 15: // Grupo APAGAR FRENTE 
+      for (kk=32;kk<94;kk++) {
+      if (bit_test(LGrupo[kk],4)){ // si pertenece al grupo
+      if (IntLuz[kk] > 99){ // estaba prendido
+         IntLuz[kk] = IntLuz[kk] - 100; // apago en el arreglo en RAM
+         write_eeprom(kk,IntLuz[kk]); // apago en el arreglo en ROM
+         delay_ms(5);
+         printf("%c%c%c%c", 250, kk, 80, kk+80); // Apagamos  en la red
+      } // si estaba prendido..
+      } // si pertenece al grupo
+      } // for...
+   break;
+
+   case 16: // Grupo APAGAR PASILLOS 
+      for (kk=32;kk<94;kk++) {
+      if (bit_test(LGrupo[kk],5)){ // si pertenece al grupo
+      if (IntLuz[kk] > 99){ // estaba prendido
+         IntLuz[kk] = IntLuz[kk] - 100; // apago en el arreglo en RAM
+         write_eeprom(kk,IntLuz[kk]); // apago en el arreglo en ROM
+         delay_ms(5);
+         printf("%c%c%c%c", 250, kk, 80, kk+80); // Apagamos  en la red
+      } // si estaba prendido..
+      } // si pertenece al grupo
+      } // for...
+   break;
+
+   case 17: // Grupo APAGAR AUTO1 
+      for (kk=32;kk<94;kk++) {
+      if (bit_test(LGrupo[kk],6)){ // si pertenece al grupo
+      if (IntLuz[kk] > 99){ // estaba prendido
+         IntLuz[kk] = IntLuz[kk] - 100; // apago en el arreglo en RAM
+         write_eeprom(kk,IntLuz[kk]); // apago en el arreglo en ROM
+         delay_ms(5);
+         printf("%c%c%c%c", 250, kk, 80, kk+80); // Apagamos  en la red
+      } // si estaba prendido..
+      } // si pertenece al grupo
+      } // for...
+   break;
+
+   case 18: // Grupo APAGAR AUTO2 
+      for (kk=32;kk<94;kk++) {
+      if (bit_test(LGrupo[kk],7)){ // si pertenece al grupo
+      if (IntLuz[kk] > 99){ // estaba prendido
+         IntLuz[kk] = IntLuz[kk] - 100; // apago en el arreglo en RAM
+         write_eeprom(kk,IntLuz[kk]); // apago en el arreglo en ROM
+         delay_ms(5);
+         printf("%c%c%c%c", 250, kk, 80, kk+80); // Apagamos  en la red
+      } // si estaba prendido..
+      } // si pertenece al grupo
+      } // for...
+   break;
+
+
+   case 21:  // Grupo PRENDER TODOS
+      for (kk=32;kk<94;kk++) {
+      if (IntLuz[kk] < 99){ // estaba apagado
+         IntLuz[kk] = IntLuz[kk] + 100; // prendo en el arreglo
+         write_eeprom(kk,IntLuz[kk]);
+         delay_ms(5);
+      } // si estaba apagado..
+      } // for...
+      printf("%c%c%c%c", 250, 100, 90, 190); // Apagamos todo en la red
+   break;
+
+   case 22:  // Grupo PRENDER INTERIOR 
+      for (kk=32;kk<94;kk++) {
+      if (bit_test(LGrupo[kk],1)){ // si pertenece al grupo
+      if (IntLuz[kk] < 99){ // estaba prendido
+         IntLuz[kk] = IntLuz[kk] + 100; // apago en el arreglo en RAM
+         write_eeprom(kk,IntLuz[kk]); // apago en el arreglo en ROM
+         delay_ms(5);
+         printf("%c%c%c%c", 250, kk, 90, kk+90); // Apagamos  en la red
+      } // si estaba prendido..
+      } // si pertenece al grupo
+      } // for...
+   break;
+
+   case 23: // Grupo PRENDER EXTERIOR 
+      for (kk=32;kk<94;kk++) {
+      if (bit_test(LGrupo[kk],2)){ // si pertenece al grupo
+      if (IntLuz[kk] < 99){ // estaba prendido
+         IntLuz[kk] = IntLuz[kk] + 100; // apago en el arreglo en RAM
+         write_eeprom(kk,IntLuz[kk]); // apago en el arreglo en ROM
+         delay_ms(5);
+         printf("%c%c%c%c", 250, kk, 90, kk+90); // Apagamos  en la red
+      } // si estaba prendido..
+      } // si pertenece al grupo
+      } // for...
+   break;
+
+   case 24: // Grupo PREDNER JARDIN 
+      for (kk=32;kk<94;kk++) {
+      if (bit_test(LGrupo[kk],3)){ // si pertenece al grupo
+      if (IntLuz[kk] < 99){ // estaba prendido
+         IntLuz[kk] = IntLuz[kk] + 100; // apago en el arreglo en RAM
+         write_eeprom(kk,IntLuz[kk]); // apago en el arreglo en ROM
+         delay_ms(5);
+         printf("%c%c%c%c", 250, kk, 90, kk+90); // Apagamos  en la red
+      } // si estaba prendido..
+      } // si pertenece al grupo
+      } // for...
+   break;
+
+   case 25: // Grupo PRENDER FRENTE 
+      for (kk=32;kk<94;kk++) {
+      if (bit_test(LGrupo[kk],4)){ // si pertenece al grupo
+      if (IntLuz[kk] < 99){ // estaba prendido
+         IntLuz[kk] = IntLuz[kk] + 100; // apago en el arreglo en RAM
+         write_eeprom(kk,IntLuz[kk]); // apago en el arreglo en ROM
+         delay_ms(5);
+         printf("%c%c%c%c", 250, kk, 90, kk+90); // Apagamos  en la red
+      } // si estaba prendido..
+      } // si pertenece al grupo
+      } // for...
+   break;
+
+   case 26: // Grupo APAGAR PASILLOS 
+      for (kk=32;kk<94;kk++) {
+      if (bit_test(LGrupo[kk],5)){ // si pertenece al grupo
+      if (IntLuz[kk] < 99){ // estaba prendido
+         IntLuz[kk] = IntLuz[kk] + 100; // apago en el arreglo en RAM
+         write_eeprom(kk,IntLuz[kk]); // apago en el arreglo en ROM
+         delay_ms(5);
+         printf("%c%c%c%c", 250, kk, 90, kk+90); // Apagamos  en la red
+      } // si estaba prendido..
+      } // si pertenece al grupo
+      } // for...
+   break;
+
+   case 27: // Grupo APAGAR AUTO1 
+      for (kk=32;kk<94;kk++) {
+      if (bit_test(LGrupo[kk],6)){ // si pertenece al grupo
+      if (IntLuz[kk] < 99){ // estaba prendido
+         IntLuz[kk] = IntLuz[kk] + 100; // apago en el arreglo en RAM
+         write_eeprom(kk,IntLuz[kk]); // apago en el arreglo en ROM
+         delay_ms(5);
+         printf("%c%c%c%c", 250, kk, 90, kk+90); // Apagamos  en la red
+      } // si estaba prendido..
+      } // si pertenece al grupo
+      } // for...
+   break;
+
+   case 28: // Grupo APAGAR AUTO2 
+      for (kk=32;kk<94;kk++) {
+      if (bit_test(LGrupo[kk],7)){ // si pertenece al grupo
+      if (IntLuz[kk] < 99){ // estaba prendido
+         IntLuz[kk] = IntLuz[kk] + 100; // apago en el arreglo en RAM
+         write_eeprom(kk,IntLuz[kk]); // apago en el arreglo en ROM
+         delay_ms(5);
+         printf("%c%c%c%c", 250, kk, 90, kk+90); // Apagamos  en la red
+      } // si estaba prendido..
+      } // si pertenece al grupo
+      } // for...
+   break;
+} // switch
+if (submenu < 10) submenu = submenu + 10;
+Rebote = true;
+} // si ok
+} //rebote falso
+
+if (Rebote == false){
+if (input(CANCEL) == 0){ // salgo al toque con cancel
+if (submenu < 10) {
+Menu = 32;
+submenu = 100;
+} 
+if (submenu > 10) submenu = submenu - 10;
+if (submenu > 10) submenu = submenu - 10;
+Rebote = true;
+} // si cancel
+}
+
+
+if (Rebote == false){
+if (input(ARRIBA) == 0){ // aprieto arriba
+if (submenu < 10) { // es menor que 10
+submenu = submenu - 1;
+if (submenu == 0) submenu = 1;
+} else { // submenu es mayor que 10
+if (submenu > 20){
+submenu = submenu - 10;
+} else submenu = submenu + 10;
+}
+Rebote = true;
+} // si Arriba
+} // rebote falso
+
+
+
+if (Rebote == false){
+if (input(ABAJO) == 0){ // aprieto abajo
+if (submenu < 10) { // es menor que 10
+submenu = submenu + 1;
+if (submenu == 9) submenu = 8;
+} else { // submenu es mayor que 10
+if (submenu > 20){
+submenu = submenu - 10;
+} else submenu = submenu + 10;
+}
+Rebote = true;
+} // si Arriba
+} // rebote falso
+
+////////////////////////////////// GRAFICA ////////////////////////////////////////
+lcd_gotoxy(1,1);
+printf(lcd_putc, "== Control Grupal ==");
+lcd_gotoxy(1,2);
+if ((submenu == 11) || (submenu == 21)) printf(lcd_putc, "   %cGrupo? TODAS    ",143);
+if ((submenu == 12) || (submenu == 22)) printf(lcd_putc, "   %cGrupo? INTERIOR ",143);
+if ((submenu == 13) || (submenu == 23)) printf(lcd_putc, "   %cGrupo? EXTERIOR ",143);
+if ((submenu == 14) || (submenu == 24)) printf(lcd_putc, "   %cGrupo? JARDIN   ",143);
+if ((submenu == 15) || (submenu == 25)) printf(lcd_putc, "   %cGrupo? FRENTE   ",143);
+if ((submenu == 16) || (submenu == 26)) printf(lcd_putc, "   %cGrupo? PASILLOS ",143);
+if ((submenu == 17) || (submenu == 27)) printf(lcd_putc, "   %cGrupo? AUTO (1) ",143);
+if ((submenu == 18) || (submenu == 28)) printf(lcd_putc, "   %cGrupo? AUTO (2) ",143);
+if (submenu == 1) {
+if (bit_test(tiempo1,0)) printf(lcd_putc, " ~ %cGrupo? TODAS    ",143);
+else printf(lcd_putc, " ~ %cGrupo?          ",143);
+}
+if (submenu == 2) {
+if (bit_test(tiempo1,0)) printf(lcd_putc, " ~ %cGrupo? INTERIOR ",143);
+else printf(lcd_putc, " ~ %cGrupo?          ",143);
+}
+if (submenu == 3) {
+if (bit_test(tiempo1,0)) printf(lcd_putc, " ~ %cGrupo? EXTERIOR ",143);
+else printf(lcd_putc, " ~ %cGrupo?          ",143);
+}
+if (submenu == 4) {
+if (bit_test(tiempo1,0)) printf(lcd_putc, " ~ %cGrupo? JARDIN   ",143);
+else printf(lcd_putc, " ~ %cGrupo?          ",143);
+}
+if (submenu == 5) {
+if (bit_test(tiempo1,0)) printf(lcd_putc, " ~ %cGrupo? FRENTE   ",143);
+else printf(lcd_putc, " ~ %cGrupo?          ",143);
+}
+if (submenu == 6) {
+if (bit_test(tiempo1,0)) printf(lcd_putc, " ~ %cGrupo? PASILLOS ",143);
+else printf(lcd_putc, " ~ %cGrupo?          ",143);
+}
+if (submenu == 7) {
+if (bit_test(tiempo1,0)) printf(lcd_putc, " ~ %cGrupo? AUTO (1) ",143);
+else printf(lcd_putc, " ~ %cGrupo?          ",143);
+}
+if (submenu == 8) {
+if (bit_test(tiempo1,0)) printf(lcd_putc, " ~ %cGrupo? AUTO (2) ",143);
+else printf(lcd_putc, " ~ %cGrupo?          ",143);
+}
+lcd_gotoxy(1,3);
+if ((submenu > 10) && (submenu < 20)) printf(lcd_putc, " ~ ");
+else printf(lcd_putc, "   ");
+lcd_gotoxy(4,3);
+printf(lcd_putc, "Apagar           ");
+
+lcd_gotoxy(1,4);
+if (submenu > 20) printf(lcd_putc, " ~ ");
+else printf(lcd_putc, "   ");
+lcd_gotoxy(4,4);
+printf(lcd_putc, "Encender         ");
+restart_wdt();
+} // dentro de while
+
+} // fn
+
+
+void LuzInt(){  // Configura la intensidad de las luces
+
+LIMPIARLCD;
+int submenu = 33;
+short editar = false;
+//short ON[99];
+
+while (submenu < 93){ // hasta llenar todas las luces
+
+restart_wdt();
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == false){
+if (input(OOKK) == 0){ 
+if (editar == false) editar = true;
+else editar = false;
+Rebote = true;
+} // si ok
+}
+
+if (Rebote == false){
+if (input(CANCEL) == 0){ // salgo al toque con cancel
+if (editar == true) editar = false;
+else {
+Menu = 33;
+submenu = 95;
+}
+Rebote = true;
+} // si cancel
+}
+
+if (Rebote == false){
+if (input(ABAJO) == 0){ // si abajo
+if (editar){ // editar habilitado
+if ((IntLuz[submenu] != 27) && (IntLuz[submenu] != 127)) IntLuz[submenu] = IntLuz[submenu] + 3;
+if (IntLuz[submenu] > 99) printf("%c%c%c%c", 250, submenu, IntLuz[submenu]-100, submenu + IntLuz[submenu]-100); // enviamos la intensidad sin el 100
+if (IntLuz[submenu] < 99) printf("%c%c%c%c", 250, submenu, IntLuz[submenu], submenu + IntLuz[submenu]); // enviamos la intensidad apagada
+write_eeprom(submenu,IntLuz[submenu]);
+} else { // editar no habilitado
+++submenu;
+if (submenu == 93) submenu = 33;
+}
+Rebote = true;
+} // si Abajo
+} // si rebote
+
+
+if (Rebote == false){
+if (input(ARRIBA) == 0){ // si arriba
+if (editar){ // editar habilitado
+if ((IntLuz[submenu] != 0 ) && (IntLuz[submenu] != 100 )) IntLuz[submenu] = IntLuz[submenu] - 3;
+if (IntLuz[submenu] > 99) printf("%c%c%c%c", 250, submenu, IntLuz[submenu]-100, submenu + IntLuz[submenu]-100); // enviamos la intensidad sin el 100
+if (IntLuz[submenu] < 99) printf("%c%c%c%c", 250, submenu, IntLuz[submenu], submenu + IntLuz[submenu]); // enviamos la intensidad apagada
+write_eeprom(submenu,IntLuz[submenu]);
+} else { // editar no habilitado
+--submenu;
+if (submenu == 32) submenu = 92;
+}
+Rebote = true;
+} // si Abajo
+} // si rebote
+
+lcd_gotoxy(1,1);
+printf(lcd_putc, "= Control de luces =");
+lcd_gotoxy(1,2);
+printf(lcd_putc, "   Configurar la    ");
+lcd_gotoxy(1,3);
+if (!editar){ // editar falso
+if (bit_test(tiempo1,0)){
+printf(lcd_putc, " intensidad Luz #%02u ",(submenu-32));
+} else printf(lcd_putc, " intensidad Luz     ");
+}else { // editar verdadero
+printf(lcd_putc, " intensidad Luz #%02u ",(submenu-32));
+}
+lcd_gotoxy(1,4);
+if (editar) { // si editar prendido
+if (bit_test(tiempo1,0)){
+if (IntLuz[submenu] > 80){ // La luz esta prendida
+printf(lcd_putc, "         %u%%        ",( ( 30 - (IntLuz[submenu]-100) ) / 3 ) * 10);
+} else { // Luz apagada
+printf(lcd_putc, "         %u%%        ",( ( 30 - (IntLuz[submenu]) ) / 3 ) * 10);
+}
+} else { // si bit si
+printf(lcd_putc, "                    ");
+}
+} else {  // Editar apagado
+if (IntLuz[submenu] > 80){ // La luz esta prendida
+printf(lcd_putc, "         %u%%        ",( ( 30 - (IntLuz[submenu]-100) ) / 3 ) * 10);
+} else { // luz apagada
+printf(lcd_putc, "         %u%%        ",( ( 30 - (IntLuz[submenu]) ) / 3 ) * 10);
+}
+} // else editar (apagado)
+} // dentro de while
+} // fn
+
+
+void LuzOnOff(){ // prender y apagar las luces individualmente
+LIMPIARLCD;
+restart_wdt();
+int submenu = 33;
+
+while (submenu < 93){ // hasta llenar todas las luces
+
+restart_wdt();
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == false){
+if (input(OOKK) == 0){ // si ok, solo sumo
+if (IntLuz[submenu] > 80){ // La luz esta prendida
+IntLuz[submenu] = IntLuz[submenu] - 100; // (la apagamos en ram)
+write_eeprom(submenu,IntLuz[submenu]);
+delay_ms(1);
+printf("%c%c%c%c", 250, submenu, 80, submenu + 80); // La apagamos en la red
+} else { // La luz esta apagada
+IntLuz[submenu] = IntLuz[submenu] + 100; // (la prendemos en ram)
+write_eeprom(submenu,IntLuz[submenu]);
+delay_ms(1);
+printf("%c%c%c%c", 250, submenu, 90, submenu + 90); // La prendemos en la red
+}
+Rebote = true;
+} // si ok
+}
+
+if (Rebote == false){
+if (input(CANCEL) == 0){ // salgo al toque con cancel
+Rebote = true;
+Menu = 31;
+submenu = 95;
+} // si cancel
+}
+
+if (Rebote == false){
+if (input(ABAJO) == 0){ // si abajo
+Rebote = true;
+++submenu;
+if (submenu == 93) submenu = 33;
+} // si Abajo
+} // si rebote
+
+if (Rebote == false){
+if (input(ARRIBA) == 0){ // si abajo
+Rebote = true;
+--submenu;
+if (submenu == 32) submenu = 92;
+} // si Abajo
+} // si rebote
+
+
+lcd_gotoxy(1,1);
+printf(lcd_putc, "= Control de luces =");
+lcd_gotoxy(1,2);
+printf(lcd_putc, " Estado de Luz #%02u: ",(submenu-32));
+lcd_gotoxy(1,3);
+if (IntLuz[submenu] > 80){ // La luz esta prendida
+if (bit_test(tiempo1,0)) printf(lcd_putc, "     ENCENDIDA      ");
+else printf(lcd_putc, "                    ");
+lcd_gotoxy(1,4);
+printf(lcd_putc, "  Intensidad: %u%%  ",( ( 30 - (IntLuz[submenu]-100) ) / 3 ) * 10);
+} else {
+if (bit_test(tiempo1,0)) printf(lcd_putc, "      APAGADA       ");
+else printf(lcd_putc, "                    ");
+lcd_gotoxy(1,4);
+printf(lcd_putc, "  Intensidad: %u%%  ",( ( 30 - (IntLuz[submenu]) ) / 3 ) * 10);
+}
+
+} // dentro de while
+} // fn
+
+
+void ActAlarma(){
+
+LIMPIARLCD;
+restart_wdt();
+
+int submenu = 1;
+int segu; // Auxiliar para contar los segundos
+int tpoo = (TpoSalida + 1); // tiempo para mostrar
+
+while (submenu < 3){ // hasta llenar todo
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == false){
+if (input(OOKK) == 0){ // si ok, solo sumo
+if (submenu == 1) ++submenu;
+Rebote = true;
+} // si ok
+}
+
+if (Rebote == false){
+if (input(CANCEL) == 0){ // si cancel solo resto o salgo con 10
+if (submenu == 1) --submenu;
+Rebote = true;
+if (submenu == 0) {
+submenu=10;
+Menu = 21; // para salir con el cancel o el error
+}
+} // si cancel
+}
+
+if (submenu == 1) {
+lcd_gotoxy(1,2);
+printf(lcd_putc, "   %cDesea activar  ",143);
+lcd_gotoxy(1,3);
+if (Menu == 121) printf(lcd_putc, "   alarma TOTAL ?    ");
+if (Menu == 122) printf(lcd_putc, "  alarma NOCTURNA?  ");
+if (Menu == 123) printf(lcd_putc, "  alarma EXTERIOR?  ");
+} // cuando submenu es 1 (antes de aceptar)
+
+if (submenu == 2) {
+//EstadoAl = 2;
+lcd_gotoxy(1,2);
+printf(lcd_putc, "  Armado de alarma  ");
+lcd_gotoxy(1,3);
+printf(lcd_putc, "      en: %3u       ",tpoo);
+
+if (Menu == 121) { // TOTAL
+if (tpoo > 10) printf("%c%c%c%c", 250, 100, 121, 221); // Todas oscilan durante activacion de alarma total
+if (tpoo < 10) printf("%c%c%c%c", 250, 100, 122, 222); // Todas oscilan durante activacion de alarma total
+}
+
+if ((Menu == 122) || (Menu == 123)) { // Nocturna o Exterior
+if (tpoo > 10) printf("%c%c%c%c", 250, LHall, 121, LHall+121); // Todas oscilan durante activacion de alarma total
+if (tpoo < 10) printf("%c%c%c%c", 250, LHall, 122, LHall+122); // Todas oscilan durante activacion de alarma total
+}
+
+if (sec != segu){
+segu = sec;
+--tpoo;
+}
+} // cuando submenu es 2 (Alarma ya aceptada)
+
+
+if (tpoo == 0) submenu = 3;
+restart_wdt();
+} // dentro de while
+
+if (submenu == 3){ // si es 3 es porque se activo, sino seria 10
+
+if (Menu == 121) { // TOTAL
+EstadoAl = 3;
+write_eeprom(EstAlarma,EstadoAl);
+delay_ms(1);
+printf("%c%c%c%c", 250, 100, 80, 180); // Apago todo
+}
+
+if (Menu == 122) { // Nocturna
+EstadoAl = 4;
+write_eeprom(EstAlarma,EstadoAl);
+delay_ms(1);
+int aux1;
+for (aux1=57;aux1<95;aux1++){ // llena todo desde el 57 al 99 (luces de modulos 3, 4 y 5)
+printf("%c%c%c%c", 250, aux1, 80, aux1+80); // Apago todo del 57 al 99
+delay_ms(2);
+restart_wdt();
+}
+}
+
+if (Menu == 123) { // Exterior
+EstadoAl = 5;
+write_eeprom(EstAlarma,EstadoAl);
+delay_ms(1);
+int aux1;
+for (aux1=80;aux1<95;aux1++){ // llena todo desde el 80 al 99 (luces de modulo 5)
+printf("%c%c%c%c", 250, aux1, 80, aux1+80); // Apago todo de la galeria
+delay_ms(2);
+restart_wdt();
+}
+}
+Menu = 0;
+} // resumen de activacion
+
+} // Fn
+
+void ConfAlarma(){
+
+LIMPIARLCD;
+restart_wdt();
+
+int submenu = 1;
+int TiemSal;
+int TiemSil;
+int tpoo;
+int diff;
+short prueba;
+char test[6];
+
+TiemSal = TpoSalida;
+TiemSil = TpoSilencioso;
+prueba = false;
+
+
+while (submenu < 4){ // hasta llenar todo
+
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == false){
+if (input(OOKK) == 0){ // si ok, solo sumo
+++submenu;
+Rebote = true;
+} // si ok
+}
+
+if (Rebote == false){
+if (input(CANCEL) == 0){ // si cancel solo resto o salgo con 10
+--submenu;
+Rebote = true;
+if (submenu == 0) {
+submenu=10;
+Menu = 24; // para salir con el cancel o el error
+}
+} // si cancel
+}
+
+if (Rebote == false){
+if (input(ABAJO) == 0){ // si arriba
+Rebote = true;
+
+   if (submenu == 1) { // arriba dentro de dia de la semana
+         ++TiemSal;
+         if (TiemSal == 181) TiemSal = 1;
+   } // arriba dentro de mes
+
+   if (submenu == 2) { // arriba dentro de mes
+         ++TiemSil;
+         if (TiemSil == 181)  TiemSil= 1;
+   } // arriba dentro de mes
+
+   if (submenu == 3) { // arriba dentro de dia
+         prueba=True;
+         tpoo = sec;
+         test="ON";
+         printf("%c%c%c%c", 250, 155, 3, 158); // Prendo la sirena por 3 segundos
+         }
+} // si Abajo
+} // si rebote
+
+if (Rebote == false){
+if (input(ARRIBA) == 0){ // si abajo
+Rebote = true;
+
+   if (submenu == 1) { // arriba dentro de dia de la semana
+         --TiemSal;
+         if (TiemSal == 255) TiemSal = 180;
+   } // arriba dentro de mes
+
+   if (submenu == 2) { // arriba dentro de mes
+         --TiemSil;
+         if (TiemSil == 255)  TiemSil= 180;
+   } // arriba dentro de mes
+
+   if (submenu == 3) { // arriba dentro de dia
+         prueba=True;
+         tpoo = sec;
+         test="ON";
+         printf("%c%c%c%c", 250, 155, 3, 158); // Prendo la sirena por 3 segundos
+         }
+}
+}
+
+
+lcd_gotoxy(1,1);
+printf(lcd_putc, "=== Conf. Alarma ===");
+lcd_gotoxy(1,2);
+if (submenu == 1){
+if (bit_test(tiempo1,0)) printf(lcd_putc, "Tpo Salida: %3us", TiemSal);
+else printf(lcd_putc, "Tpo Salida:      ");
+} else{
+lcd_gotoxy(1,2);
+printf(lcd_putc, "Tpo Salida: %3us  ", TiemSal);
+}
+
+lcd_gotoxy(1,3);
+if (submenu == 2){
+if (bit_test(tiempo1,0)) printf(lcd_putc, "Tpo Silencio: %3us",TiemSil);
+else printf(lcd_putc, "Tpo Silencio:       ");
+} else{
+lcd_gotoxy(1,3);
+printf(lcd_putc, "Tpo Silencio: %3us",TiemSil);
+}
+
+lcd_gotoxy(1,4);
+if (submenu == 3){
+if (bit_test(tiempo1,0)) printf(lcd_putc, "Prueba sirena: %s",test);
+else printf(lcd_putc, "Prueba sirena:        ");
+} else {
+lcd_gotoxy(1,4);
+ printf(lcd_putc, "Prueba sirena: %s",test);
+}
+
+restart_wdt();
+
+diff = sec - tpoo;
+
+if (diff > 2) prueba = false;
+if (prueba == false) test = "OFF  ";
+
+} // dentro de while
+
+if (submenu == 4) {
+TpoSilencioso = TiemSil;  // Cargamos en RAM
+TpoSalida = TiemSal;  // Cargamos en RAM
+
+write_eeprom(TpoSil,TpoSilencioso); // Guardamos el valor 
+write_eeprom(TpoSal,TpoSalida); // Guardamos el valor 
+Menu = 1;
+}
+} // fn
+
+
+int Autenticar(){
+
+LIMPIARLCD;
+restart_wdt();
+
+int PassCheck[2];
+
+PassCheck[0] = PassCheck[1] = 0;
+
+int submenu = 1;
+
+while (submenu < 7){
+restart_wdt();
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == False) {
+if (input(OOKK) == 0){
+Rebote = True;
+switch (submenu){
+   case 1:
+   bit_clear(PassCheck[0],0);
+   bit_set(PassCheck[0],1);
+   //++submenu;
+   break;
+
+   case 2:
+   bit_clear(PassCheck[0],2);
+   bit_set(PassCheck[0],3);
+   //++submenu;
+   break;
+
+   case 3:
+   bit_clear(PassCheck[0],4);
+   bit_set(PassCheck[0],5);
+   //++submenu;
+   break;
+
+   case 4:
+   bit_clear(PassCheck[0],6);
+   bit_set(PassCheck[0],7);
+   //++submenu;
+   break;
+   
+   case 5:
+   bit_clear(PassCheck[1],0);
+   bit_set(PassCheck[1],1);
+   //++submenu;
+   break;
+
+   case 6:
+   bit_clear(PassCheck[1],2);
+   bit_set(PassCheck[1],3);
+   //++submenu;
+   break;
+}
+++submenu;
+} // si OK
+} // rebote falso
+
+if (Rebote == False) {
+if (input(CANCEL) == 0){
+Rebote = True;
+switch (submenu){
+   case 1:
+   bit_set(PassCheck[0],0);
+   bit_set(PassCheck[0],1);
+   //++submenu;
+   break;
+
+   case 2:
+   bit_set(PassCheck[0],2);
+   bit_set(PassCheck[0],3);
+   //++submenu;
+   break;
+
+   case 3:
+   bit_set(PassCheck[0],4);
+   bit_set(PassCheck[0],5);
+   //++submenu;
+   break;
+
+   case 4:
+   bit_set(PassCheck[0],6);
+   bit_set(PassCheck[0],7);
+   //++submenu;
+   break;
+
+   case 5:
+   bit_set(PassCheck[1],0);
+   bit_set(PassCheck[1],1);
+   //++submenu;
+   break;
+
+   case 6:
+   bit_set(PassCheck[1],2);
+   bit_set(PassCheck[1],3);
+   //++submenu;
+   break;
+} // switch
+++submenu;
+} // si CANCEL
+} // rebote falso
+
+
+if (Rebote == False) {
+if (input(ARRIBA) == 0){
+Rebote = True;
+switch (submenu){
+   case 1:
+   bit_clear(PassCheck[0],0);
+   bit_clear(PassCheck[0],1);
+   //++submenu;
+   break;
+
+   case 2:
+   bit_clear(PassCheck[0],2);
+   bit_clear(PassCheck[0],3);
+   //++submenu;
+   break;
+
+   case 3:
+   bit_clear(PassCheck[0],4);
+   bit_clear(PassCheck[0],5);
+   //++submenu;
+   break;
+
+   case 4:
+   bit_clear(PassCheck[0],6);
+   bit_clear(PassCheck[0],7);
+   //++submenu;
+   break;
+
+   case 5:
+   bit_clear(PassCheck[1],0);
+   bit_clear(PassCheck[1],1);
+   //++submenu;
+   break;
+
+   case 6:
+   bit_clear(PassCheck[1],2);
+   bit_clear(PassCheck[1],3);
+   //++submenu;
+   break;
+
+} // switch
+++submenu;
+} // si ARRIBA
+} // rebote falso
+
+
+if (Rebote == False) {
+if (input(ABAJO) == 0){
+Rebote = True;
+switch (submenu){
+   case 1:
+   bit_set(PassCheck[0],0);
+   bit_clear(PassCheck[0],1);
+   //++submenu;
+   break;
+
+   case 2:
+   bit_set(PassCheck[0],2);
+   bit_clear(PassCheck[0],3);
+   //++submenu;
+   break;
+
+   case 3:
+   bit_set(PassCheck[0],4);
+   bit_clear(PassCheck[0],5);
+   //++submenu;
+   break;
+
+   case 4:
+   bit_set(PassCheck[0],6);
+   bit_clear(PassCheck[0],7);
+   //++submenu;
+   break;
+
+   case 5:
+   bit_set(PassCheck[1],0);
+   bit_clear(PassCheck[1],1);
+   //++submenu;
+   break;
+
+   case 6:
+   bit_set(PassCheck[1],2);
+   bit_clear(PassCheck[1],3);
+   //++submenu;
+   break;
+
+} // switch
+++submenu;
+} // si CANCEL
+} // rebote falso
+
+//lcd_gotoxy(1,1);
+//printf(lcd_putc, "== Cambiar Clave ===");
+lcd_gotoxy(1,2);
+printf(lcd_putc, " Ingrese la clave:  ");
+
+switch (submenu){
+case 1:
+lcd_gotoxy(7,3);
+printf(lcd_putc, " %c_____",199);
+break;
+case 2:
+lcd_gotoxy(7,3);
+printf(lcd_putc, " *%c____",199);
+break;
+case 3:
+lcd_gotoxy(7,3);
+printf(lcd_putc, " **%c___",199);
+break;
+case 4:
+lcd_gotoxy(7,3);
+printf(lcd_putc, " ***%c__",199);
+break;
+case 5:
+lcd_gotoxy(7,3);
+printf(lcd_putc, " ****%c_",199);
+break;
+case 6:
+lcd_gotoxy(7,3);
+printf(lcd_putc, " *****%c",199);
+break;
+
+} // Sw subm
+
+restart_wdt();
+
+
+} // while -- todo lleno cuando salgo de aqui
+
+if ((PassCheck[0] == Passwd[0]) && (PassCheck[1] == Passwd[1]))  { // contraseña comprobada ok
+int espera = Tiempo1 + 5;
+LIMPIARLCD;
+lcd_gotoxy(1,2);
+printf(lcd_putc, "   Clave correcta   ");
+lcd_gotoxy(1,3);
+printf(lcd_putc, "    Bienvenido :)   ");
+restart_wdt();
+while (espera != Tiempo1) restart_wdt();
+return 1;
+} else { // contraseña no comprobada ok
+int espera = Tiempo1 + 5;
+LIMPIARLCD;
+lcd_gotoxy(1,2);
+lcd_gotoxy(1,2);
+printf(lcd_putc, "  Clave incorrecta  ");
+lcd_gotoxy(1,3);
+printf(lcd_putc, " Acceso denegado :( ");
+restart_wdt();
+while (espera != Tiempo1) restart_wdt();
+//delay_ms(1000);
+Menu = 1;
+return 0;
+}
+} // fn
+
+
+void CClave(){
+if (Autenticar()){
+restart_wdt();
+LIMPIARLCD;
+
+int PassCheck1[2];
+int PassCheck2[2];
+
+PassCheck1[0] = PassCheck1[1] = PassCheck2[0] = PassCheck2[1] = 0;
+
+int submenu = 1;
+
+while (submenu < 13){
+
+restart_wdt();
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+
+if (Rebote == False) {
+if (input(OOKK) == 0){
+Rebote = True;
+switch (submenu){
+   case 1:
+   bit_clear(PassCheck1[0],0);
+   bit_set(PassCheck1[0],1);
+   //++submenu;
+   break;
+
+case 7:
+   bit_clear(PassCheck2[0],0);
+   bit_set(PassCheck2[0],1);
+   //++submenu;
+   break;
+   case 2:
+   bit_clear(PassCheck1[0],2);
+   bit_set(PassCheck1[0],3);
+   //++submenu;
+   break;
+
+   case 8:
+   bit_clear(PassCheck2[0],2);
+   bit_set(PassCheck2[0],3);
+   //++submenu;
+   break;
+
+   case 3:
+   bit_clear(PassCheck1[0],4);
+   bit_set(PassCheck1[0],5);
+   //++submenu;
+   break;
+   case 9:
+   bit_clear(PassCheck2[0],4);
+   bit_set(PassCheck2[0],5);
+   //++submenu;
+   break;
+
+   case 4:
+   bit_clear(PassCheck1[0],6);
+   bit_set(PassCheck1[0],7);
+   //++submenu;
+   break;
+   case 10:
+   bit_clear(PassCheck2[0],6);
+   bit_set(PassCheck2[0],7);
+   //++submenu;
+   break;
+
+   case 5:
+   bit_clear(PassCheck1[1],0);
+   bit_set(PassCheck1[1],1);
+   //++submenu;
+   break;
+   case 11:
+   bit_clear(PassCheck2[1],0);
+   bit_set(PassCheck2[1],1);
+   //++submenu;
+   break;
+
+   case 6:
+   bit_clear(PassCheck1[1],2);
+   bit_set(PassCheck1[1],3);
+   //++submenu;
+   break;
+   case 12:
+   bit_clear(PassCheck2[1],2);
+   bit_set(PassCheck2[1],3);
+   //++submenu;
+   break;
+}
+++submenu;
+} // si OK
+} // rebote falso
+
+if (Rebote == False) {
+if (input(CANCEL) == 0){
+Rebote = True;
+switch (submenu){
+   case 1:
+   bit_set(PassCheck1[0],0);
+   bit_set(PassCheck1[0],1);
+   //++submenu;
+   break;
+   case 7:
+   bit_set(PassCheck2[0],0);
+   bit_set(PassCheck2[0],1);
+   //++submenu;
+   break;
+
+   case 2:
+   bit_set(PassCheck1[0],2);
+   bit_set(PassCheck1[0],3);
+   //++submenu;
+   break;
+   case 8:
+   bit_set(PassCheck2[0],2);
+   bit_set(PassCheck2[0],3);
+   //++submenu;
+   break;
+
+   case 3:
+   bit_set(PassCheck1[0],4);
+   bit_set(PassCheck1[0],5);
+   //++submenu;
+   break;
+   case 9:
+   bit_set(PassCheck2[0],4);
+   bit_set(PassCheck2[0],5);
+   //++submenu;
+   break;
+
+   case 4:
+   bit_set(PassCheck1[0],6);
+   bit_set(PassCheck1[0],7);
+   //++submenu;
+   break;
+   case 10:
+   bit_set(PassCheck2[0],6);
+   bit_set(PassCheck2[0],7);
+   //++submenu;
+   break;
+
+   case 5:
+   bit_set(PassCheck1[1],0);
+   bit_set(PassCheck1[1],1);
+   //++submenu;
+   break;
+   case 11:
+   bit_set(PassCheck2[1],0);
+   bit_set(PassCheck2[1],1);
+   //++submenu;
+   break;
+
+   case 6:
+   bit_set(PassCheck1[1],2);
+   bit_set(PassCheck1[1],3);
+   //++submenu;
+   break;
+   case 12:
+   bit_set(PassCheck2[1],2);
+   bit_set(PassCheck2[1],3);
+   //++submenu;
+   break;
+} // switch
+++submenu;
+} // si CANCEL
+} // rebote falso
+
+
+if (Rebote == False) {
+if (input(ARRIBA) == 0){
+Rebote = True;
+switch (submenu){
+   case 1:
+   bit_clear(PassCheck1[0],0);
+   bit_clear(PassCheck1[0],1);
+   //++submenu;
+   break;
+   case 7:
+   bit_clear(PassCheck2[0],0);
+   bit_clear(PassCheck2[0],1);
+   //++submenu;
+   break;
+
+   case 2:
+   bit_clear(PassCheck1[0],2);
+   bit_clear(PassCheck1[0],3);
+   //++submenu;
+   break;
+   case 8:
+   bit_clear(PassCheck2[0],2);
+   bit_clear(PassCheck2[0],3);
+   //++submenu;
+   break;
+
+   case 3:
+   bit_clear(PassCheck1[0],4);
+   bit_clear(PassCheck1[0],5);
+   //++submenu;
+   break;
+   case 9:
+   bit_clear(PassCheck2[0],4);
+   bit_clear(PassCheck2[0],5);
+   //++submenu;
+   break;
+
+   case 4:
+   bit_clear(PassCheck1[0],6);
+   bit_clear(PassCheck1[0],7);
+   //++submenu;
+   break;
+   case 10:
+   bit_clear(PassCheck2[0],6);
+   bit_clear(PassCheck2[0],7);
+   //++submenu;
+   break;
+
+   case 5:
+   bit_clear(PassCheck1[1],0);
+   bit_clear(PassCheck1[1],1);
+   //++submenu;
+   break;
+   case 11:
+   bit_clear(PassCheck2[1],0);
+   bit_clear(PassCheck2[1],1);
+   //++submenu;
+   break;
+
+   case 6:
+   bit_clear(PassCheck1[1],2);
+   bit_clear(PassCheck1[1],3);
+   //++submenu;
+   break;
+   case 12:
+   bit_clear(PassCheck2[1],2);
+   bit_clear(PassCheck2[1],3);
+   //++submenu;
+   break;
+} // switch
+++submenu;
+} // si ARRIBA
+} // rebote falso
+
+
+if (Rebote == False) {
+if (input(ABAJO) == 0){
+Rebote = True;
+switch (submenu){
+   case 1:
+   bit_set(PassCheck1[0],0);
+   bit_clear(PassCheck1[0],1);
+   //++submenu;
+   break;
+   case 7:
+   bit_set(PassCheck2[0],0);
+   bit_clear(PassCheck2[0],1);
+   //++submenu;
+   break;
+
+   case 2:
+   bit_set(PassCheck1[0],2);
+   bit_clear(PassCheck1[0],3);
+   //++submenu;
+   break;
+   case 8:
+   bit_set(PassCheck2[0],2);
+   bit_clear(PassCheck2[0],3);
+   //++submenu;
+   break;
+
+   case 3:
+   bit_set(PassCheck1[0],4);
+   bit_clear(PassCheck1[0],5);
+   //++submenu;
+   break;
+   case 9:
+   bit_set(PassCheck2[0],4);
+   bit_clear(PassCheck2[0],5);
+   //++submenu;
+   break;
+
+   case 4:
+   bit_set(PassCheck1[0],6);
+   bit_clear(PassCheck1[0],7);
+   //++submenu;
+   break;
+   case 10:
+   bit_set(PassCheck2[0],6);
+   bit_clear(PassCheck2[0],7);
+   //++submenu;
+   break;
+
+   case 5:
+   bit_set(PassCheck1[1],0);
+   bit_clear(PassCheck1[1],1);
+   //++submenu;
+   break;
+   case 11:
+   bit_set(PassCheck2[1],0);
+   bit_clear(PassCheck2[1],1);
+   //++submenu;
+   break;
+
+   case 6:
+   bit_set(PassCheck1[1],2);
+   bit_clear(PassCheck1[1],3);
+   //++submenu;
+   break;
+   case 12:
+   bit_set(PassCheck2[1],2);
+   bit_clear(PassCheck2[1],3);
+   //++submenu;
+   break;
+} // switch
+++submenu;
+} // si CANCEL
+} // rebote falso
+
+lcd_gotoxy(1,1);
+printf(lcd_putc, "== Cambiar Clave ===");
+lcd_gotoxy(1,2);
+printf(lcd_putc, "  Nueva: ");
+if (submenu > 6) {
+lcd_gotoxy(1,3);
+printf(lcd_putc, " Repita: ");
+}
+
+switch (submenu){
+case 1:
+lcd_gotoxy(10,2);
+printf(lcd_putc, "%c_____",199);
+break;
+case 2:
+lcd_gotoxy(10,2);
+printf(lcd_putc, "*%c____",199);
+break;
+case 3:
+lcd_gotoxy(10,2);
+printf(lcd_putc, "**%c___",199);
+break;
+case 4:
+lcd_gotoxy(10,2);
+printf(lcd_putc, "***%c__",199);
+break;
+case 5:
+lcd_gotoxy(10,2);
+printf(lcd_putc, "****%c_",199);
+break;
+case 6:
+lcd_gotoxy(10,2);
+printf(lcd_putc, "*****%c",199);
+break;
+
+case 7:
+lcd_gotoxy(10,2);
+printf(lcd_putc, "******");
+lcd_gotoxy(10,3);
+printf(lcd_putc, "%c_____",199);
+break;
+case 8:
+lcd_gotoxy(10,3);
+printf(lcd_putc, "*%c____",199);
+break;
+case 9:
+lcd_gotoxy(10,3);
+printf(lcd_putc, "**%c___",199);
+break;
+case 10:
+lcd_gotoxy(10,3);
+printf(lcd_putc, "***%c__",199);
+break;
+case 11:
+lcd_gotoxy(10,3);
+printf(lcd_putc, "****%c_",199);
+break;
+case 12:
+lcd_gotoxy(10,3);
+printf(lcd_putc, "*****%c",199);
+break;
+} // Sw subm
+
+restart_wdt();
+
+
+} // while -- todo lleno cuando salgo de aqui
+
+if (submenu == 13){
+if ((PassCheck1[0] == PassCheck2[0]) && (PassCheck1[1] == PassCheck2[1]))  { // contraseña comprobada ok
+LIMPIARLCD;
+lcd_gotoxy(1,2);
+printf(lcd_putc, "  Clave modificada  ");
+lcd_gotoxy(1,3);
+printf(lcd_putc, "  correctamente :)  ");
+
+Passwd[0] = PassCheck1[0];  // Contraseña a RAM
+Passwd[1] = PassCheck1[1];  // Contraseña a RAM
+
+write_eeprom(Password,Passwd[0]);  // Contraseña1 de RAM a ROM
+delay_ms(10);
+restart_wdt();
+write_eeprom(Password + 1,Passwd[1]);  // Contraseña2 de RAM a ROM
+delay_ms(1000);
+Menu = 1;
+} else { // contraseña no comprobada ok
+LIMPIARLCD;
+lcd_gotoxy(1,2);
+printf(lcd_putc, "  Error: Las claves ");
+lcd_gotoxy(1,3);
+printf(lcd_putc, "   no coinciden :(  ");
+restart_wdt();
+delay_ms(1000);
+Menu = 1;
+}
+} // if 13
+} // si autenticamos
+} // fn
+
+void Ccasandra(){  // Configuracion de casandra
+
+LIMPIARLCD;
+restart_wdt();
+
+char sServ[3];
+char sAuto1[3];
+char sAuto2[3];
+char sWeb[3];
+char sTel[3];
+
+if (bit_test(ConfCas,0)) sServ = "SI";
+else sServ = "NO";
+if (bit_test(ConfCas,1)) sAuto1 = "SI";
+else sAuto1 = "NO";
+if (bit_test(ConfCas,2)) sAuto2 = "SI";
+else sAuto2 = "NO";
+if (bit_test(ConfCas,3)) sWeb = "SI";
+else sWeb = "NO";
+if (bit_test(ConfCas,4)) sTel = "SI";
+else sTel = "NO";
+
+int submenu =1;
+
+while (submenu < 6){
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == False) {
+if (input(OOKK) == 0){
+Rebote = true;
+++submenu;
+}
+}
+
+if (Rebote == False) {
+if (input(CANCEL) == 0){
+Rebote = true;
+--submenu;
+if (submenu == 0){
+submenu = 7;
+Menu = 4;
+}
+}
+}
+
+if (Rebote == False) {
+if ((input(ABAJO) == 0) || (input(ARRIBA)) == 0) { // si arriba o abajo togleo
+Rebote = true;
+   if (submenu == 1) { // dentro de SERV
+         if (bit_test(ConfCas,0)){
+         bit_clear(ConfCas,0);
+         sServ = "NO";
+         }
+         else {
+         bit_set(ConfCas,0);
+         sServ = "SI";
+         }
+   } // arriba dentro de mes
+
+   if (submenu == 2) { // dentro de AUTO1
+         if (bit_test(ConfCas,1)){
+         bit_clear(ConfCas,1);
+         sAuto1 = "NO";
+         }
+         else {
+         bit_set(ConfCas,1);
+         sAuto1 = "SI";
+         }
+   } // arriba dentro de mes
+
+   if (submenu == 3) { // dentro de AUTO2
+         if (bit_test(ConfCas,2)){
+         bit_clear(ConfCas,2);
+         sAuto2 = "NO";
+         }
+         else {
+         bit_set(ConfCas,2);
+         sAuto2 = "SI";
+         }
+   } // arriba dentro de mes
+
+   if (submenu == 4) { // Dentro de Web
+         if (bit_test(ConfCas,3)){
+         bit_clear(ConfCas,3);
+         sWeb = "NO";
+         }
+         else {
+         bit_set(ConfCas,3);
+         sWeb = "SI";
+         }
+   } // arriba dentro de mes
+
+   if (submenu == 5) { // Dentro de Web
+         if (bit_test(ConfCas,4)){
+         bit_clear(ConfCas,4);
+         sTel = "NO";
+         }
+         else {
+         bit_set(ConfCas,4);
+         sTel = "SI";
+         }
+   } // arriba dentro de mes
+
+} // si arriba o abajo
+} // rebote falso
+
+
+lcd_gotoxy(1,1);
+printf(lcd_putc, "== Conf. Casandra ==");
+if ((submenu == 1) || (submenu == 2) || (submenu == 3)) {
+lcd_gotoxy(1,2);
+printf(lcd_putc, "  Luz Pasillos: ");
+lcd_gotoxy(1,3);
+printf(lcd_putc, "  Grupo Auto 1: ");
+lcd_gotoxy(1,4);
+printf(lcd_putc, "  Grupo Auto 2: ");
+
+lcd_gotoxy(16,2);
+if (submenu == 1) {
+   if (bit_test(tiempo1,0)){
+      printf(lcd_putc, " %s  ", sServ);
+   } else printf(lcd_putc, "   ");
+} else printf(lcd_putc, " %s  ", sServ);
+
+lcd_gotoxy(16,3);
+if (submenu == 2) {
+   if (bit_test(tiempo1,0)){
+      printf(lcd_putc, " %s  ", sAuto1);
+   } else printf(lcd_putc, "   ");
+} else printf(lcd_putc, " %s  ", sAuto1);
+
+lcd_gotoxy(16,4);
+if (submenu == 3) {
+   if (bit_test(tiempo1,0)){
+      printf(lcd_putc, " %s  ", sAuto2);
+   } else printf(lcd_putc, "   ");
+} else printf(lcd_putc, " %s  ", sAuto2);
+
+restart_wdt();
+} // primeros 3
+
+if (submenu == 4) { // mirando el 4to
+lcd_gotoxy(1,2);
+printf(lcd_putc, "  Grupo Auto 1: ");
+lcd_gotoxy(1,3);
+printf(lcd_putc, "  Grupo Auto 2: ");
+lcd_gotoxy(1,4);
+printf(lcd_putc, " Ctrl Internet: ");
+
+lcd_gotoxy(16,2);
+if (submenu == 2) {
+   if (bit_test(tiempo1,0)){
+      printf(lcd_putc, " %s  ", sAuto1);
+   } else printf(lcd_putc, "   ");
+} else printf(lcd_putc, " %s  ", sAuto1);
+
+lcd_gotoxy(16,3);
+if (submenu == 3) {
+   if (bit_test(tiempo1,0)){
+      printf(lcd_putc, " %s  ", sAuto2);
+   } else printf(lcd_putc, "   ");
+} else printf(lcd_putc, " %s  ", sAuto2);
+
+lcd_gotoxy(16,4);
+if (submenu == 4) {
+   if (bit_test(tiempo1,0)){
+      printf(lcd_putc, " %s  ", sWeb);
+   } else printf(lcd_putc, "   ");
+} else printf(lcd_putc, " %s  ", sWeb);
+
+restart_wdt();
+} // mirando el 4
+
+if (submenu == 5) {  // llegando al ultimo
+lcd_gotoxy(1,2);
+printf(lcd_putc, "  Grupo Auto 2: ");
+lcd_gotoxy(1,3);
+printf(lcd_putc, " Ctrl Internet: ");
+lcd_gotoxy(1,4);
+printf(lcd_putc, " Ctrl Telefono: ");
+
+lcd_gotoxy(16,2);
+if (submenu == 3) {
+   if (bit_test(tiempo1,0)){
+      printf(lcd_putc, " %s  ", sAuto2);
+   } else printf(lcd_putc, "   ");
+} else printf(lcd_putc, " %s  ", sAuto2);
+
+lcd_gotoxy(16,3);
+if (submenu == 4) {
+   if (bit_test(tiempo1,0)){
+      printf(lcd_putc, " %s  ", sWeb);
+   } else printf(lcd_putc, "   ");
+} else printf(lcd_putc, " %s  ", sWeb);
+
+lcd_gotoxy(16,4);
+if (submenu == 5) {
+   if (bit_test(tiempo1,0)){
+      printf(lcd_putc, " %s  ", sTel);
+   } else printf(lcd_putc, "   ");
+} else printf(lcd_putc, " %s  ", sTel);
+
+restart_wdt();
+} // mirando el ultimo
+
+} // while -- todo lleno cuando salgo de aqui
+
+if (submenu == 6){
+write_eeprom(EstCasandra,ConfCas);
+delay_ms(5);
+
+if (bit_test(ConfCas,3)){ // Webserver activado
+printf("%c%c%c%c", 250, 150, 90, 150 + 90); //PRENDO
+} else { // WebServer desactivado
+printf("%c%c%c%c", 250, 150, 80, 150 + 80); //APAGO
+}
+if (bit_test(ConfCas,4)){ // Sim900 activado
+printf("%c%c%c%c", 250, 151, 90, 151 + 90); //PRENDO
+} else { // Sim900 desactivado
+printf("%c%c%c%c", 250, 151, 80, 151 + 80); //APAGO
+}
+Menu = 1;
+} 
+} // Fn
+
+void CReset(){
+
+LIMPIARLCD;
+short Eleccion = True;
+
+if (Autenticar()){
+
+while (Eleccion){
+
+restart_wdt();
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == false) {
+
+lcd_gotoxy(1,1);
+printf(lcd_putc, "= RESETEAR SISTEMA =");
+lcd_gotoxy(1,2);
+printf(lcd_putc, "%cSe eliminaran todos",165);
+lcd_gotoxy(1,3);
+printf(lcd_putc, "los datos guardados!");
+lcd_gotoxy(1,4);
+printf(lcd_putc, "    %cContinuar?    ",143);
+
+if (bit_test(Tiempo1,0)) ONLCDLED;
+else OFFLCDLED;
+
+
+if (input(ARRIBA)==0 || input(ABAJO)==0 || input(CANCEL)==0){
+Rebote = True;
+Menu = 1;
+Eleccion = False;
+}
+ 
+if (input(OOKK)==0){  ///////////////////////////////// Destruir todo YA!
+Rebote = True;
+LIMPIARLCD; // Limpiamos la pantalla
+ONLCDLED;
+
+lcd_gotoxy(1,2);
+printf(lcd_putc, " Eliminando datos...");
+
+int aux1;
+long aux2;
+
+for (aux1=0;aux1<5;aux1++){ // llena todo desde el 0 al 4
+TempMax[aux1]=0;    // Temperatura maxima de la semana - dia - hora - minuto
+TempMin[aux1]=0;    // Temperatura minima de la semana - dia - hora - minuto 
+SolMax[aux1]=0;     // Maximo nivel de radiacion de sol en la semana - dia - hora - minuto
+Comando[aux1]=0;    // Carga de EVENTO y VALOR
+}
+
+for (aux2=0;aux2<1024;aux2++){ // llena todo desde el 0 al 255
+write_eeprom(aux2,0x00);  // la llenamos con 0
+delay_ms(2);
+restart_wdt();
+}
+
+for (aux1=31;aux1<93;aux1++){ // llena todo desde el 32 al 93 
+IntLuz[aux1] = 0; // 100%
+}
+
+EstadoAl = 1;      // Estado de la alarma
+write_eeprom(EstAlarma,EstadoAl);
+ConfCas=0;       // Estado del nivel de penetracion de Casandra (apagado todo)
+write_eeprom(EstCasandra,ConfCas);
+TpoSilencioso = 60;
+write_eeprom(TpoSil,TpoSilencioso); // Guardamos el valor
+TpoSalida = 45;
+write_eeprom(TpoSal,TpoSalida); // Guardamos el valor
+
+
+/*
+port_b_pullups(true);
+setup_wdt(WDT_ON);
+enable_interrupts(global);
+enable_interrupts(int_rda); // Interrupcion de llegada de datos
+enable_interrupts(INT_TIMER1); // Interrupcion por timer 1
+setup_timer_1(T1_INTERNAL | T1_DIV_BY_8);
+set_timer1(0);
+*/
+ds1307_set_date_time(1,1,1,1,0,0,0);  // Inicio de valores para el DS1307
+delay_ms(5);
+Menu = 1;      // Posicion dentro del menu 0
+Eleccion = False;
+} // If eliminar todo confirmado
+} // si rebote es falso
+} // Salimos del while con eleccion
+} // si autenticamos correctamente
+} // Fn
+
+void CHs(){
+
+LIMPIARLCD;
+int mes=month;
+int dia=day;
+int dias=dow;
+int hora=hrs;
+int minuto=min;
+int anio=year;
+char sdia[11];
+char smes[4];
+
+restart_wdt();
+
+int submenu=1;
+
+Rebote = true;
+//lcd_putc("\f"); // Limpiamos la pantalla
+
+while (submenu < 6){ // hasta llenar todo
+
+
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == false){
+if (input(OOKK) == 0){ // si ok, solo sumo
+++submenu;
+Rebote = true;
+} // si ok
+}
+
+if (Rebote == false){
+if (input(CANCEL) == 0){ // si cancel solo resto o salgo con 10
+--submenu;
+Rebote = true;
+if (submenu == 0) {
+submenu = 10;
+}
+} // si cancel
+}
+
+if (Rebote == false){
+if (input(ABAJO) == 0){ // si arriba
+Rebote = true;
+
+   if (submenu == 1) { // arriba dentro de dia de la semana
+         ++dias;
+         if (dias == 8) dias = 1;
+   } // arriba dentro de mes
+
+   if (submenu == 2) { // arriba dentro de mes
+         ++mes;
+         if (mes == 13) mes = 1;
+   } // arriba dentro de mes
+
+   if (submenu == 3) { // arriba dentro de dia
+         ++dia;
+         if ((dia >= 32) && ((mes == 1) || (mes == 3) || (mes == 5) || (mes == 7) || (mes == 8) || (mes == 10) || (mes == 12))) dia = 1;
+         if ((dia >= 29) && (mes == 2)) dia = 1;
+         if ((dia >= 31) && ((mes == 4) || (mes == 6) || (mes == 9) || (mes == 11))) dia = 1;
+   } // arriba dentro de dia
+
+   if (submenu == 4) { // arriba dentro de hora
+         ++hora;
+         if (hora == 24) hora = 0;
+   } // arriba dentro de hora
+
+   if (submenu == 5) { // arriba dentro de minuto
+         ++minuto;
+         if (minuto == 60) minuto = 0;
+   } // arriba dentro de minuto
+}
+}
+
+if (Rebote == false){
+if (input(ARRIBA) == 0){ // si abajo
+Rebote = true;
+
+   if (submenu == 1) { // abajo dentro de mes
+         --dias;
+         if (dias == 0) dias = 7;
+   } // arriba dentro de mes
+
+   if (submenu == 2) { // abajo dentro de mes
+         --mes;
+         if (mes == 0) mes = 12;
+   } // arriba dentro de mes
+
+   if (submenu == 3) { // arriba dentro de dia
+         --dia;
+         if ((dia == 0) && ((mes == 1) || (mes == 3) || (mes == 5) || (mes == 7) || (mes == 8) || (mes == 10) || (mes == 12))) dia = 31;
+         if ((dia == 0) && (mes == 2)) dia = 28;
+         if ((dia == 0) && ((mes == 4) || (mes == 6) || (mes == 9) || (mes == 11))) dia = 30;
+   } // arriba dentro de dia
+
+   if (submenu == 4) { // arriba dentro de hora
+         --hora;
+         if (hora == 255) hora = 23;
+   } // arriba dentro de hora
+
+   if (submenu == 5) { // arriba dentro de minuto
+         --minuto;
+         if (minuto == 255) minuto = 59;
+   } // arriba dentro de minuto
+
+}
+}
+
+switch (dias){
+   case 1:
+   sdia="Lunes    ";
+   break;
+
+   case 2:
+   sdia="Martes   ";
+   break;
+
+   case 3:
+   sdia="Miercoles";
+   break;
+
+   case 4:
+   sdia="Jueves   ";
+   break;
+
+   case 5:
+   sdia="Viernes  ";
+   break;
+
+   case 6:
+   sdia="Sabado   ";
+   break;
+
+   case 7:
+   sdia="Domingo  ";
+   break;
+}
+
+switch (mes){
+   case 1:
+   smes="Ene";
+   break;
+
+   case 2:
+   smes="Feb";
+   break;
+
+   case 3:
+   smes="Mar";
+   break;
+
+   case 4:
+   smes="Abr";
+   break;
+
+   case 5:
+   smes="May";
+   break;
+
+   case 6:
+   smes="Jun";
+   break;
+
+   case 7:
+   smes="Jul";
+   break;
+
+   case 8:
+   smes="Ago";
+   break;
+
+   case 9:
+   smes="Sep";
+   break;
+
+   case 10:
+   smes="Oct";
+   break;
+
+   case 11:
+   smes="Nov";
+   break;
+
+   case 12:
+   smes="Dic";
+   break;
+}
+
+lcd_gotoxy(1,1);
+printf(lcd_putc, "=== Fecha y hora ===");
+
+lcd_gotoxy(1,2);
+if (submenu == 1){
+if (bit_test(tiempo1,0)) printf(lcd_putc, "   Dia: %s ", sdia);
+else printf(lcd_putc, "   Dia:             ");
+} else{
+lcd_gotoxy(1,2);
+printf(lcd_putc, "   Dia: %s ", sdia);
+}
+
+lcd_gotoxy(1,3);
+if (submenu == 3){
+if (bit_test(tiempo1,0)) printf(lcd_putc, " Nro: %02u   ",dia);
+else printf(lcd_putc, " Nro:     ");
+} else
+{
+lcd_gotoxy(1,3);
+printf(lcd_putc, " Nro: %02u ",dia);
+}
+
+lcd_gotoxy(11,3);
+if (submenu == 2){
+if (bit_test(tiempo1,0)) printf(lcd_putc, "Mes: %s",smes);
+else printf(lcd_putc, "Mes:    ");
+} else {
+lcd_gotoxy(11,3);
+printf(lcd_putc, "Mes: %s",smes);
+}
+
+lcd_gotoxy(1,4);
+if (submenu == 4){
+if (bit_test(tiempo1,0)) printf(lcd_putc, "Hora: %02u ",hora);
+else printf(lcd_putc, "Hora:    ");
+} else {
+lcd_gotoxy(1,4);
+printf(lcd_putc, "Hora: %02u ",hora);
+}
+
+lcd_gotoxy(10,4);
+if (submenu == 5){
+if (bit_test(tiempo1,0)) printf(lcd_putc, "Minutos: %02u",minuto);
+else printf(lcd_putc, "Minutos:   ");
+} else {
+lcd_gotoxy(10,4);
+printf(lcd_putc, "Minutos: %02u",minuto);
+}
+restart_wdt();
+
+} // todo lleno cuando salgo de aqui
+
+if (submenu == 10) Menu = 62;
+if (submenu == 6) {
+Menu = 1;
+ds1307_set_date_time(dia,mes,anio,dias,hora,minuto,0);
+}
+}
+
+void inicio(){  /////////////// INICIO //////////////////////
+ONLCDLED;
+//// Pullups para el teclado ////
+port_b_pullups(true);
+
+/////////  Inicio el WatchDog  ///////////////
+setup_wdt(WDT_ON);
+
+//// Interrupciones /////
+enable_interrupts(global);
+//disable_interrupts(global);
+enable_interrupts(int_RDA); // Interrupcion de llegada de datos
+enable_interrupts(int_TIMER1); // Interrupcion por timer 1
+
+////// Inicio de dispositivos //////
+DHT11_init();
+DS1307_init();
+lcd_init();
+LIMPIARLCD;
+lcd_gotoxy(1,2);
+printf(lcd_putc, "      CASANDRA      ");
+lcd_gotoxy(1,3);
+printf(lcd_putc, "    Iniciando....   ");
+delay_ms(50);
+
+/////////////////////// Arrancamos el timer 1 para medir tiempos internos ////////////
+setup_timer_1(T1_INTERNAL | T1_DIV_BY_8);
+set_timer1(0);
+
+////// Conversor AD //////
+setup_adc(ADC_CLOCK_INTERNAL );
+setup_adc_ports(AN0_TO_AN3);
+
+////// Inicio de variables ///////////
+Menu = 1;      // Posicion dentro del menu 0
+Tiempo1=0; // Contador de tiempos internos larga en 0
+TempOut=20;    // Temperatura remota (afuera)
+Sol=50;       // Intensidad del sol (remota, afuera)
+Rebote = false;    // Teclado no presionado
+
+EstadoAl = read_eeprom(EstAlarma);  // Leo el estado de alarma
+ConfCas = read_eeprom(EstCasandra);
+
+TpoSilencioso = read_eeprom(TpoSil);  // Leo el tiempo silencioso
+TpoSalida = read_eeprom(TpoSal);  // Leo el tiempo para salir
+
+Passwd[0] = read_eeprom(Password);  // Contraseña1 de ROM a RAM
+Passwd[1] = read_eeprom(Password + 1);  // Contraseña2 de ROM a RAM
+
+Gdias[1] = read_eeprom(G1Dias);
+Gdias[2] = read_eeprom(G2Dias);
+GOn[1] = read_eeprom(G1On);
+GOn[2] = read_eeprom(G2On);
+GOff[1] = read_eeprom(G1Off);
+GOff[2] = read_eeprom(G2Off);
+Umbral = read_eeprom(Umbra);
+
+
+//Passwd[0] = 0;
+//Passwd[1] = 0;
+//ds1307_set_date_time(1,1,1,1,0,0,0);  // Inicio de valores para el DS1307
+
+restart_wdt();
+
+////////////// Recuperamos intensidades de EEPROM /////////////////
+int aux1;
+for (aux1=32;aux1<93;aux1++){ // llena todo desde el 32 al 93 
+IntLuz[aux1] = read_eeprom(aux1);
+//IntLuz[aux1] = 15;
+delay_ms(5);
+if (IntLuz[aux1] > 80) { // La luz estaba encendida
+printf("%c%c%c%c", 250, aux1, (IntLuz[aux1]-100), aux1+(IntLuz[aux1]-100)); // Le cargo la intensidad
+delay_ms(5);
+printf("%c%c%c%c", 250, aux1, 90, aux1+90); // La enciendo
+delay_ms(5);
+} else{ // La luz estaba apagada
+printf("%c%c%c%c", 250, aux1, (IntLuz[aux1]), aux1+(IntLuz[aux1])); // Le cargo la intensidad
+delay_ms(5);
+}
+restart_wdt();
+}
+
+Defini();
+
+LIMPIARLCD; // Limpiamos la pantalla
+
+/*while(1){  ///////////////////// Impresion de caracteres
+int kkk;
+
+for(kkk=0;kkk<255;++kkk){
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "(%03u)%c (%03u)%c (%03u)%c",kkk,kkk,kkk+1,kkk+1,kkk+2,kkk+2);
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "(%03u)%c (%03u)%c (%03u)%c",kkk+3,kkk+3,kkk+4,kkk+4,kkk+5,kkk+5);
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "(%03u)%c (%03u)%c (%03u)%c",kkk+6,kkk+6,kkk+7,kkk+7,kkk+8,kkk+8);
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "(%03u)%c (%03u)%c (%03u)%c",kkk+9,kkk+9,kkk+10,kkk+10,kkk+11,kkk+11);
+delay_ms(2000);
+}
+*/
+}
+
+
+void DHT11_init()
+{
+output_float(DHT11_pin);
+delay_ms(1000);
+}
+
+unsigned char get_byte()
+{
+unsigned char s=0;
+unsigned char value=0;
+
+for(s=0;s<8;s+=1)
+{
+value<<=1;
+while(!input(DHT11_pin));
+delay_us(30);
+
+if(input(DHT11_pin))
+{
+value|=1;
+}
+while(input(DHT11_pin));
+}
+return value;
+}
+
+unsigned char get_data()
+{
+short chk=0;
+unsigned char s=0;
+unsigned char check_sum=0;
+
+output_high(DHT11_pin);
+output_low(DHT11_pin);
+delay_ms(18);
+output_high(DHT11_pin);
+delay_us(26);
+
+chk=input(DHT11_pin);
+if(chk)
+{
+return 1;
+}
+delay_us(80);
+
+chk=input(DHT11_pin);
+if(!chk)
+{
+return 2;
+}
+delay_us(80);
+
+for(s=0;s<=4;s+=1)
+{
+values[s]=get_byte();
+}
+
+output_high(DHT11_pin);
+
+for(s=0;s<4;s+=1)
+{
+check_sum+=values[s];
+}
+
+if(check_sum!=values[4])
+{
+return 3;
+}
+else
+{
+return 0;
+}
+}
+
+
+////////////////////////// INTERRUPCIONES //////////////////////////////
+#int_RDA
+void RDA_isr(){
+if (kbhit()){
+Comando[i]=getc();
+if (Comando[i] == 250) i=0;
+else ++i;
+if (i==3) Comunica();
+}
+}
+
+#int_TIMER1
+void  TIMER1_isr(void) { //Función de interrupción por desbordamiento TMR1  
+set_timer1(0); //carga del TMR1
+restart_wdt();
+Tiempo(); // Tomo el tiempo
+DosVeinte(); // Tomo los valores del ADC
+if ((bit_test(tiempo1,0) == 0) && (bit_test(tiempo1,3) == 0)) Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+++Tiempo1;
+}
+
+void Comunica(){
+restart_wdt();
+i=0;
+if (( (Comando[0]) + (Comando[1]) ) == Comando[2]){ // Prueba de checksum
+
+if (Comando[0] == 165) Sol = Comando[1];
+if (Comando[0] == 163) Vbata = Comando[1];
+if (Comando[0] == 160) TempOut = ((Comando[1]-10)/5);
+
+
+} // if checksum
+} //fn
+
+
+void Teclado(){
+
+restart_wdt();
+if (input(ARRIBA)==1 && input(ABAJO)==1 && input(OOKK)==1 && input(CANCEL)==1) Rebote = false; // Soltamos las teclas
+
+if (Rebote == false){ // Tomamos el comando ya que el antirebote nos dice que esta ok
+
+switch (Menu){
+
+////////////////////////////// Comienza Menu basico ///////////////////////////
+   case 0:
+   if (input(ARRIBA)==0 || input(ABAJO)==0 || input(OOKK)==0 || input(CANCEL)==0){
+   Holding();
+   Rebote = True;
+   Menu = 1;
+   } else Notificador();
+   break;
+   
+   case 1:  // Resumen ppal
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 2;
+   }
+   if (input(CANCEL)==0){
+   Menu = 0;
+   Rebote = True;
+   }
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   VerTemp();
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   VerTens();
+   }
+   break;
+   
+   case 2:  // Menu - Activar alarma
+   if (input(ARRIBA)==0){
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 3;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 21;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 1;
+   }
+   break;
+   
+   case 3: // Menu - Luces
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 2;
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 4;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 31;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 1;
+   }
+   break;
+   
+   case 4: // Menu - Casandra
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 3;
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 5;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 41;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 1;
+   }
+   break;
+   
+   case 5: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 4;
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 6;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 51;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 1;
+   }
+   break;
+   
+   case 6: // Menu - Luces
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 5;
+   }
+   if (input(ABAJO)==0){
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 61;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 1;
+   }
+   break;
+   
+
+
+///////////////////////////////////////////// Comienza menu alarma /////////
+
+   case 21: // Menu - ALARMA Total
+   if (input(ARRIBA)==0){
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 22;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 121;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 2;
+   }
+   break;
+   
+   case 22: // Menu - Alarma noche suave
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 21;
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 23;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 122;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 2;
+   }
+   break;
+   
+   case 23: // Menu - Alarma noche dura
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 22;
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 24;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 123;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 2;
+   }
+   break;
+   
+   case 24: // Menu - Alarma conf
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 23;
+   }
+   if (input(ABAJO)==0){
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 124;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 2;
+   }
+   break;
+   
+
+///////////////////////////////////////////// Comienza menu de Luces /////////
+
+   case 31: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 32;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 131;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 3;
+   }
+   break;
+   
+   case 32: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 31;
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 33;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 132;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 3;
+   }
+   break;
+   
+   case 33: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 32;
+   }
+   if (input(ABAJO)==0){
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 133;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 3;
+   }
+   break;
+   
+
+
+/*//////////////////////////////////////////// Comienza menu de Casandra /////////
+
+   case 41: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 42;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 141;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 4;
+   }
+   break;
+   
+   case 42: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 41;
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 43;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 142;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 4;
+   }
+   break;
+   
+   case 43: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 42;
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 44;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 143;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 4;
+   }
+   break;
+   
+   case 44: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 43;
+   }
+   if (input(ABAJO)==0){
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 144;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 4;
+   }
+   break;
+   
+*/
+
+///////////////////////////////////////////// Comienza menu del Automatico /////////
+
+   case 51: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 52;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 151;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 5;
+   }
+   break;
+   
+   case 52: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 51;
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 53;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 152;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 5;
+   }
+   break;
+   
+   case 53: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 52;
+   }
+   if (input(ABAJO)==0){
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 153;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 5;
+   }
+   break;
+   
+
+///////////////////////////////////////////// Comienza menu de Configuracion /////////
+
+   case 61: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 62;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 161;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 6;
+   }
+   break;
+   
+   case 62: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 61;
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 63;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 162;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 6;
+   }
+   break;
+   
+   case 63: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 62;
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 64;
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 163;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 6;
+   }
+   break;
+   
+   case 64: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 63;
+   }
+   if (input(ABAJO)==0){
+   Rebote = True;
+   Menu = 65;
+
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 164;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 6;
+   }
+   break;
+
+   case 65: // Menu - Grupo automatico
+   if (input(ARRIBA)==0){
+   Rebote = True;
+   Menu = 64;
+   }
+   if (input(ABAJO)==0){
+   }
+   if (input(OOKK)==0){
+   Rebote = True;
+   Menu = 165;
+   }
+   if (input(CANCEL)==0){
+   Rebote = True;
+   Menu = 6;
+   }
+   break;
+   
+Pantalla(); // Actualizamos la pantalla
+
+} // switch
+} // if del antirebote
+} // Fn
+
+void Pantalla(){
+
+restart_wdt();
+switch (Menu){
+
+   case 0:
+//   output_high(LCDLED);
+//   lcd_putc("\f"); // Limpiamos la pantalla, por este motivo solo la llamamos cuando es necesario
+   break;
+
+   case 1:
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "%c%c%c %02u %c%c%c  %02u:%02u:%02u", Dia[0], Dia[1], Dia[2], day, Mes[0], Mes[1], Mes[2], hrs, min, sec);
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, " Temp: %2d%cC / %2d%cC  ", TempIn-4, 210, TempOut, 210);
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, " HR: %02u%%    Sol:%3u ", Hum, Sol);
+   lcd_gotoxy(1,4);
+   if (EstadoAl==1)  printf(lcd_putc, "Alarma: Desactivada ");
+   if (EstadoAl==3)  printf(lcd_putc, "Alarma: TOTAL Activa");
+   if (EstadoAl==4)  printf(lcd_putc, "Alarma: NOCTURNA Act");
+   if (EstadoAl==5)  printf(lcd_putc, "Alarma: EXTERIOR Act");
+   break;
+
+   case 2:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "======= MENU =======");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, " ~ (1) Alarma       ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "   (2) Luces        ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (3) Casandra     ");
+   break;
+
+   case 3:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "======= MENU =======");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (1) Alarma       ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, " ~ (2) Luces        ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (3) Casandra     ");
+   break;
+
+   case 4:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "======= MENU =======");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (2) Luces        ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, " ~ (3) Casandra     ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (4) Automaticos  ");
+   break;
+
+   case 5:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "======= MENU =======");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (3) Casandra     ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, " ~ (4) Automaticos  ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (5) Configuracion");
+   break;
+
+   case 6:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "======= MENU =======");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (3) Casandra     ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "   (4) Automaticos  ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, " ~ (5) Configuracion");
+   break;
+
+   case 21:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "====== Alarma ======");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "~ (1) Activar Total ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "  (2) Activar Noche ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "  (3) Activar Afuera");
+   break;
+
+   case 22:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "====== Alarma ======");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "  (1) Activar Total ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "~ (2) Activar Noche ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "  (3) Activar Afuera");
+   break;
+
+   case 23:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "====== Alarma ======");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "  (2) Activar Noche ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "~ (3) Activar Afuera");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "  (4) Configuracion ");
+   break;
+
+   case 24:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "====== Alarma ======");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "  (2) Activar Noche ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "  (3) Activar Afuera");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "~ (4) Configuracion ");
+   break;
+
+   case 31:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "= Control de luces =");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, " ~ (1) Prend/Apagar ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "   (2) Grupos       ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (3) Regulacion   ");
+   break;
+
+   case 32:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "= Control de luces =");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (1) Prend/Apagar ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, " ~ (2) Grupos       ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (3) Regulacion   ");
+   break;
+
+   case 33:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "= Control de luces =");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (1) Prend/Apagar ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "   (2) Grupos       ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, " ~ (3) Regulacion   ");
+   break;
+/*
+   case 41:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "== Nivel Casandra ==");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, " ~ (1) Serv y Autom ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "   (2) Solo Serv    ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (3) Solo Autom   ");
+   break;
+
+   case 42:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "== Nivel Casandra ==");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (1) Serv y Autom ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, " ~ (2) Solo Serv    ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (3) Solo Autom   ");
+   break;
+
+   case 43:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "== Nivel Casandra ==");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (2) Solo Serv    ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, " ~ (3) Solo Autom   ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (4) Nada :(      ");
+   break;
+
+   case 44:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "== Nivel Casandra ==");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (2) Solo Serv    ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "   (3) Solo Autom   ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, " ~ (4) Nada :(      ");
+   break;
+*/
+   case 51:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "==== Automatico ====");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, " ~ (1) Elegir dias  ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "   (2) Horario      ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (3) Elegir luces ");
+   break;
+
+   case 52:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "==== Automatico ====");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (1) Elegir dias  ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, " ~ (2) Horario      ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (3) Elegir luces ");
+   break;
+
+   case 53:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "==== Automatico ====");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (1) Elegir dias  ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "   (2) Horario      ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, " ~ (3) Elegir luces ");
+   break;
+
+   case 61:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "=== Configuracion ==");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, " ~ (1) Cambiar Clave");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "   (2) Fecha y hora ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (3) Fotocelula   ");
+   break;
+
+   case 62:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "=== Configuracion ==");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (1) Cambiar Clave");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, " ~ (2) Fecha y hora ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (3) Fotocelula   ");
+   break;
+
+   case 63:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "=== Configuracion ==");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (2) Fecha y hora ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, " ~ (3) Fotocelula   ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (4) Resetear :O  ");
+   break;
+
+   case 64:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "=== Configuracion ==");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (3) Fotocelula   ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, " ~ (4) Resetear :O  ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, "   (5) Acerca de..  ");
+   break;
+
+
+   case 65:
+//   Tiempo(); // Tomo el tiempo
+//   Ambiente(); // Tomo las variables ambientales (incluidas las remotas con cuidado de no saturar el bus)
+//   output_low(LCDLED);
+   lcd_gotoxy(1,1);
+   printf(lcd_putc, "=== Configuracion ==");
+   lcd_gotoxy(1,2);
+   printf(lcd_putc, "   (3) Fotocelula   ");
+   lcd_gotoxy(1,3);
+   printf(lcd_putc, "   (4) Resetear :O  ");
+   lcd_gotoxy(1,4);
+   printf(lcd_putc, " ~ (5) Acerca de..  ");
+   break;
+ 
+}
+
+}
+
+void Tiempo(){
+restart_wdt();
+ds1307_get_date(day,month,year,dow);
+delay_ms(2);
+
+ds1307_get_time(hrs,min,sec);
+delay_ms(2);
+
+if ((hrs == 0) && (min == 0) && (sec == 0)){ // Empieza un nuevo dia, reseteamos los valores maximos y minimos
+TempMax[0]=0;
+TempMin[0]=255;
+SolMax[0]=0;
+}
+
+switch (dow){
+   case 1:
+   Dia="Lun";
+   break;
+
+   case 2:
+   Dia="Mar";
+   break;
+
+   case 3:
+   Dia="Mie";
+   break;
+
+   case 4:
+   Dia="Jue";
+   break;
+
+   case 5:
+   Dia="Vie";
+   break;
+
+   case 6:
+   Dia="Sab";
+   break;
+
+   case 7:
+   Dia="Dom";
+   break;
+
+   default:
+   Dia="??";
+   break;
+}
+
+switch (month){
+   case 1:
+   Mes="Ene";
+   break;
+
+   case 2:
+   Mes="Feb";
+   break;
+
+   case 3:
+   Mes="Mar";
+   break;
+
+   case 4:
+   Mes="Abr";
+   break;
+
+   case 5:
+   Mes="May";
+   break;
+
+   case 6:
+   Mes="Jun";
+   break;
+
+   case 7:
+   Mes="Jul";
+   break;
+
+   case 8:
+   Mes="Ago";
+   break;
+
+   case 9:
+   Mes="Sep";
+   break;
+
+   case 10:
+   Mes="Oct";
+   break;
+
+   case 11:
+   Mes="Nov";
+   break;
+
+   case 12:
+   Mes="Dic";
+   break;
+   
+   default:
+   Dia="??";
+   break;
+
+}
+
+}
+
+void Ambiente(){
+restart_wdt();
+state = get_data();
+
+if (TempOut > TempMax[0]){ // tenemos una nueva temperatura maxima del dia
+TempMax[0] = TempOut;
+long puntero;
+puntero = (long) ((dow * 5) + 95);
+write_eeprom(puntero,TempMax[0]);
+delay_ms(2);
+TempMax[1] = day;
+puntero = (long) ((dow * 5) + 96);
+write_eeprom(puntero,TempMax[1]);
+delay_ms(2);
+TempMax[2] = hrs;
+puntero = (long) ((dow * 5) + 97);
+write_eeprom(puntero,TempMax[2]);
+delay_ms(2);
+TempMax[3] = min;
+puntero = (long) ((dow * 5) + 98);
+write_eeprom(puntero,TempMax[3]);
+delay_ms(2);
+}
+
+if (TempOut < TempMin[0]){ // tenemos una nueva temperatura minima del dia
+TempMin[0] = TempOut;
+long puntero;
+puntero = (long) ((dow * 5) + 130);
+write_eeprom(puntero,TempMin[0]);
+delay_ms(2);
+TempMin[1] = day;
+puntero = (long) ((dow * 5) + 131);
+write_eeprom(puntero,TempMin[1]);
+delay_ms(2);
+TempMin[2] = hrs;
+puntero = (long) ((dow * 5) + 132);
+write_eeprom(puntero,TempMin[2]);
+delay_ms(2);
+TempMin[3] = min;
+puntero = (long) ((dow * 5) + 133);
+write_eeprom(puntero,TempMin[3]);
+delay_ms(2);
+}
+
+if (Sol > SolMax[0]){ // tenemos una nueva radiacion solar maxima
+SolMax[0] = Sol;
+long puntero;
+puntero = (long) ((dow * 5) + 165);
+write_eeprom(puntero,SolMax[0]);
+delay_ms(2);
+SolMax[1] = day;
+puntero = (long) ((dow * 5) + 166);
+write_eeprom(puntero,SolMax[1]);
+delay_ms(2);
+SolMax[2] = hrs;
+puntero = (long) ((dow * 5) + 167);
+write_eeprom(puntero,SolMax[2]);
+delay_ms(2);
+SolMax[3] = min;
+puntero = (long) ((dow * 5) + 168);
+write_eeprom(puntero,SolMax[3]);
+delay_ms(2);
+}
+
+} // fn
+
+void Holding(){
+ONLCDLED;
+LIMPIARLCD;
+while (input(ARRIBA)==0 || input(ABAJO)==0 || input(OOKK)==0 || input(CANCEL)==0){
+restart_wdt();
+lcd_gotoxy(1,2);
+printf(lcd_putc," Esta es la funcion");
+lcd_gotoxy(1,3);
+printf(lcd_putc,"    Holding();   ");
+
+} // while
+
+} //fn
+
+
+void Notificador(){
+LIMPIARLCD;
+restart_wdt();
+lcd_gotoxy(1,2);
+printf(lcd_putc," Esta es la funcion");
+lcd_gotoxy(1,3);
+printf(lcd_putc,"    Notificador();   ");
+
+} //fn
+
+
+void AcercaDe(){ // se lleva el 5% de ROM
+LIMPIARLCD;
+restart_wdt();
+int k=0;
+while (input(ARRIBA)==1 && input(ABAJO)==1 && input(CANCEL)==1){
+if (k<250) ++k;
+lcd_gotoxy(1,1);
+if (k==0) printf(lcd_putc,"==                 C");
+if (k==5) printf(lcd_putc,"==                C ");
+if (k==10) printf(lcd_putc,"==               C  ");
+if (k==15) printf(lcd_putc,"==              C  A");
+if (k==20) printf(lcd_putc,"==             C  A ");
+if (k==25) printf(lcd_putc,"==            C  A  ");
+if (k==30) printf(lcd_putc,"==           C  A  S");
+if (k==35) printf(lcd_putc,"==          C  A  S ");
+if (k==40) printf(lcd_putc,"==         C  A  S  ");
+if (k==45) printf(lcd_putc,"==        C  A  S  A");
+if (k==50) printf(lcd_putc,"==       C  A  S  A ");
+if (k==55) printf(lcd_putc,"==      C  A  S  A  ");
+if (k==60) printf(lcd_putc,"==     C  A  S  A  N");
+if (k==65) printf(lcd_putc,"==    C  A  S  A  N ");
+if (k==70) printf(lcd_putc,"==   C  A  S  A  N  ");
+if (k==75) printf(lcd_putc,"==  C  A  S  A  N  D");
+if (k==80) printf(lcd_putc,"== C  A  S  A  N  D ");
+if (k==85) printf(lcd_putc,"== C A  S  A  N  D  ");
+if (k==90) printf(lcd_putc,"== CA  S  A  N  D  R");
+if (k==95) printf(lcd_putc, "== CA S  A  N  D  R ");
+if (k==100) printf(lcd_putc,"== CAS  A  N  D  R  ");
+if (k==105) printf(lcd_putc,"== CAS A  N  D  R  A");
+if (k==110) printf(lcd_putc,"== CASA  N  D  R  A ");
+if (k==115) printf(lcd_putc,"== CASA N  D  R  A  ");
+if (k==120) printf(lcd_putc,"== CASAN  D  R  A   ");
+if (k==125) printf(lcd_putc,"== CASAN D  R  A    ");
+if (k==130) printf(lcd_putc,"== CASAND  R  A     ");
+if (k==135) printf(lcd_putc,"== CASAND R  A      ");
+if (k==140) printf(lcd_putc,"== CASANDR  A       ");
+if (k==145) printf(lcd_putc,"== CASANDR A        ");
+if (k==150) printf(lcd_putc,"== CASANDRA         ");
+if (k==155) printf(lcd_putc,"=== CASANDRA       =");
+if (k==160) printf(lcd_putc,"==== CASANDRA     ==");
+if (k==165) printf(lcd_putc,"===== CASANDRA   ===");
+if (k==170) printf(lcd_putc,"===== CASANDRA =====");
+if (k==247) printf(lcd_putc,"     CASANDRA %c     ",220);
+
+lcd_gotoxy(1,2);
+printf(lcd_putc,"Vers: 0.9b  Jun-2014");
+lcd_gotoxy(1,3);
+printf(lcd_putc,"~Gonzalo Carvallo M.");
+lcd_gotoxy(1,4);
+printf(lcd_putc,"~gonzacarv@gmail.com");
+restart_wdt();
+} // while
+Menu = 1;
+} // fn
+

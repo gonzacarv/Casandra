@@ -1,0 +1,298 @@
+/*======================================================================================================
+||   Proyecto: Casandra v1.0                                                                          ||
+||   Autor: Gonzalo Carvallo (gonzacarv@gmail.com)                                                    ||
+||   Fecha: 07/2014                                                                                   ||
+||   Compilador: PCWHD v5.025 (www.ccsinfo.com)                                                       ||
+||   Fuente: http://                                                                                  ||
+||                                                                                                    ||
+|| Firmware del modulo de alarma (con sensor de luz y de temperatura) correspondiente                 ||
+|| al sistema domotico CASANDRA. Control general con uso intensivo de EEPROM. Comunicacion sobre par  ||
+|| trensado usando el transceptor SN75176.                                                            ||
+||                                                                                                    ||
+======================================================================================================*/
+
+#include <16f88.h>
+#device ADC=10
+//#byte TMR1H = 0xFCF // Le pongo nombre al registro alto de timer 1
+//#byte TMR1L = 0xFCE // Le pongo nombre al registro bajo de timer 1
+
+#fuses WDT, MCLR, NOPUT, INTRC_IO, NOBROWNOUT // Opciones de configuración
+
+#use delay(clock=4000000)  //Reloj de 4MHz
+#use rs232(baud=9600, xmit=PIN_B5, rcv=PIN_B2, enable=PIN_B3, ERRORS) // Comunicacion serial
+
+//setup_oscillator( OSC_INTERNAL, 4000000);
+
+///////////////// Definiciones de Pines /////////////////////
+#define LUZ 0           // Canal analogico 0
+#define BATERIA 1       // Canal analogico 1
+#define TEMP 2          // Canal analogico 2
+#define JUMPER 3        // Canal analogico 3
+#define FUENTE 4        // Canal analogico 4
+#define PROMEDIO 5      // Cantidad de veces que se promedia lo obtenido en ADC
+#define LUZEXTON output_high(PIN_B6)
+#define LUZEXTOFF output_low(PIN_B6)
+#define PILOTON output_low(PIN_A6)
+#define PILOTOFF output_high(PIN_A6)
+#define SIRENAON output_high(PIN_A7)
+#define SIRENAOFF output_low(PIN_A7)
+//#define PILOTO PIN_A6   // Piloto
+//#define SIRENA PIN_A7   // Salida de sirena
+
+////////////// Definiciones de funciones ////////////////
+void inicio();   // Funcion de inicio y configuracion del modulo
+void Comunica(); // Funcion de lectura de puerto serial y armado del comando, se ejecuta despues de que BusData tiene el comando lleno
+void BusData();  // LLego algo al bus de datos (solo se ejecuta por interrupcion de byte esperando en buffer)
+void TLargo();   // timer para los tiempos largos
+void Sonar();    // Funcion que gestiona tiempos de sirena
+void TomaADC();  // Funcion de toma de valores analogicos
+
+////////// Variables Globales ///////////////
+int Comando[4]; // Arreglo que contiene el comando una vez armado
+int i;          // Contador de comando
+int j;          // Contador de tiempos largos
+int VAlarma;    // Valor actual de la alarma -=(0):Apagada=-    -=(1-99):Encendida entre 1 y 99 seg=- -=(100):Encendido continuo=-
+long LuzExt;    // Intensidad de luz exterior para calculos
+int LuzSol;     // Intensidad de luz para la red
+long Vbatt;     // Tension de la bateria para calculos
+int VBateria;   // Tension de la bateria para la red
+long Tempe;     // Temperatura exterior para calculos
+int TempExt;    // Temperatura exterior para la red
+long Jump;      // Estado del Jumper para calculos
+int JumFuen;    // Estado del jumper y de la fuente para la red (0-15) tension de fuente con jumper // (100-115) tension de fuente sin jumper
+long Vf;        // Tension de la fuente para calculos
+
+///////// Variables locales para el calculo de valores ////////////
+double AuxTemp;
+double Bata;
+double Solcito;
+double Jjumper;
+long TempNew;     // Temperatura exterior para calculos
+long TempOld=200;     // Temperatura exterior para calculos
+long ADCval;
+
+void main(){
+inicio();
+restart_wdt();
+
+while(1){
+enable_interrupts(global);
+enable_interrupts(int_rda); // Interrupcion de llegada de datos
+restart_wdt();
+
+if (Jump < 10) Sonar();  // Solo suena si esta presente el jumper de seguridad
+TomaADC();
+
+AuxTemp = (float) ((4.61 * Tempe) - 685.53)/2;  // Calculamos y convertimos la temperatura exterior
+//AuxTemp = (0.461 * Tempe) - 68.553;  // Calculamos y convertimos la temperatura exterior
+//AuxTemp = (((AuxTemp * 9) + (0.461 * Tempe) - 68.553) / 10) ;  // Calculamos y convertimos la temperatura exterior
+TempExt = AuxTemp;
+
+
+Bata = (0.27 * Vbatt) + 0.43;  // Calculamos y convertimos la tension de la bateria
+//Bata = (0.027 * Vbatt) + 0.043;  // Calculamos y convertimos la tension de la bateria
+//Bata = (((Bata * 4) + (0.027 * Vbatt) + 0.043) / 10) * 5;  // Calculamos y convertimos la tension de la bateria
+VBateria = Bata;
+
+if (LuzExt < 10) Solcito = (-2.5 * LuzExt) + 100;
+if ((LuzExt > 10) && (LuzExt < 200)) Solcito = (-0.137 * LuzExt) + 71;
+if (LuzExt > 200) Solcito = (-0.0758 * LuzExt) + 51.51;
+//Solcito = Sum1 + Sum2 + Sum3 + 679.43;
+//Solcito = (100 - (LuzExt / 7));  // Calculamos y convertimos la luz del sol
+//Solcito = (((Solcito * 9) + (100 - (LuzExt / 7))) / 10);  // Calculamos y convertimos la luz del sol
+LuzSol = Solcito;
+
+Jjumper = (0.027 * Vf) + 0.043;  // Calculamos y convertimos la tension de la bateria
+//Jjumper = (((Jjumper * 9) + (0.027 * Vf) + 0.043) / 10) ;  // Calculamos y convertimos la tension de la bateria
+
+if (Jump < 10) JumFuen = Jjumper * 2; // mando solo el valor cuando el jumper esta
+else JumFuen = Jjumper + 100; // mando el valor +100 cuando el jumper NO esta
+restart_wdt();
+
+} //while
+} // Main
+
+
+////////////////////////// INTERRUPCIONES //////////////////////////////
+#int_rda
+void BusData(){
+PILOTON;
+if (kbhit()){
+Comando[i]=getc();
+if (Comando[i] == 250) i=0;
+else ++i;
+if (i==3) Comunica();
+}
+}
+
+#int_TIMER1
+void TLargo(){
+++j; // variable de tiempos largos
+if ((VAlarma != 0) && (VAlarma != 100)) --VAlarma; // Resto el valor hasta 0 a menos que ya sea 0, o este sonando de manera continua
+if ((j == 0) || (j == 64) || (j == 128) || (j == 192)) { // Enviamos los datos en un momento arbirtario (pongo 60 para que haya tiempo de hacer los calculos analogicos antes del primer envio)
+printf("%c%c%c%c", 250, 165, LuzSol, LuzSol + 165); // Envio valor del sol
+//delay_ms(5);
+printf("%c%c%c%c", 250, 160, TempExt + 10, TempExt + 10 + 160); // Envio valor del temperatura
+//delay_ms(5);
+printf("%c%c%c%c", 250, 163, VBateria, VBateria + 163); // Envio valor de tension de bateria
+//delay_ms(5);
+printf("%c%c%c%c", 250, 164, JumFuen, JumFuen + 164); // Envio valor del jumper + cargador
+} // if j
+
+//printf("      Luz-=%u=-   Temp-=%u.%u=-   Bat-=%u=-   Jum-=%u=- \n\r", LuzSol, TempExt/5, (TempExt % 5) *2, VBateria, JumFuen); // Envio todo para deb
+//printf("      Luz-=%u=-   Temp-=%u=-   Bat-=%u=-   Jum-=%u=- \n\r", LuzSol, TempExt, VBateria, JumFuen); // Envio todo para deb
+//printf("      Luz: %u=-   Temp: %lu=-   Bat: %u=-   Jum: %u=- \n\r", LuzSol, Tempe, VBateria, JumFuen); // Envio todo para deb
+//printf("  ADCVal: %Lu=-   Promedio: %lu=-   TempExt: %u=-     \n\r", ADCval, TempNew, TempExt); // Envio todo para deb
+//delay_ms(5);
+restart_wdt();
+//if (bit_test(j,0)) PILOTOFF;
+//else  PILOTON;
+PILOTOFF;
+}
+
+
+void inicio(){  /////////////// INICIO //////////////////////
+restart_wdt();
+/*PILOTON;
+delay_ms(200);
+PILOTOFF;
+delay_ms(200);
+PILOTON;
+delay_ms(200);
+PILOTOFF;
+delay_ms(200);
+PILOTON;
+delay_ms(200);
+PILOTOFF;
+restart_wdt();
+delay_ms(200);
+PILOTON;
+delay_ms(200);
+PILOTOFF;
+delay_ms(200);
+PILOTON;
+delay_ms(200);
+PILOTOFF;
+delay_ms(200);
+PILOTON;
+delay_ms(200);
+PILOTOFF;
+restart_wdt();
+delay_ms(200);
+PILOTON;
+delay_ms(200);
+PILOTOFF;
+delay_ms(200);
+PILOTON;
+delay_ms(200);
+PILOTOFF;
+delay_ms(200);
+PILOTON;
+delay_ms(200);
+PILOTOFF;
+delay_ms(200);
+PILOTON;
+restart_wdt();
+delay_ms(2000);
+PILOTOFF;
+*/
+restart_wdt();
+
+VAlarma = 0; // Por las dudas iniciamos con la alarma apagada
+LUZEXTOFF; // Tambien con la luz apagada
+
+/////////  Inicio el WatchDog  ///////////////
+//setup_wdt(WDT_ON);
+setup_wdt(WDT_2304MS);
+
+//// Interrupciones /////
+enable_interrupts(global);
+enable_interrupts(int_rda); // Interrupcion de llegada de datos
+enable_interrupts(INT_TIMER1); // Interrupcion por timer 1
+//disable_interrupts(global);
+
+////// Conversor AD //////
+setup_adc_ports( ALL_ANALOG );
+setup_adc(ADC_CLOCK_INTERNAL );
+
+/////////  Temporizadores  ///////////////
+setup_timer_1(T1_INTERNAL | T1_DIV_BY_8);
+set_timer1(0);
+}
+
+void Comunica(){
+i=0;
+if (( (Comando[0]) + (Comando[1]) ) == Comando[2]){ // Prueba de checksum
+if (Comando[0] == 155) { // si el comando es para este modulo (alarma)
+   if (Comando[1] == 0) VAlarma = 0;
+   if (Comando[1] == 100) VAlarma = 100;
+   if ((Comando[1] != 0) && (Comando[1] != 100)) VAlarma = (Comando[1] * 2); // proporcion para que cuente en segundos
+} // si es para nosotros
+if (Comando[0] == 99) { // si el comando es para este modulo (Luz)
+   if (Comando[1] == 80) LUZEXTOFF;
+   if (Comando[1] == 90) LUZEXTON;
+} // si es para nosotros
+} // if checksum
+} //fn
+
+
+void Sonar(){
+if (VAlarma == 0){ // La alarma esta apagada
+SIRENAOFF;
+} else { // la alarma esta prendida
+SIRENAON;
+}
+} // fn
+
+
+void TomaADC(){
+//int aux;
+
+set_adc_channel(LUZ);
+LuzExt = read_adc();
+//for(aux=0;aux<5;++aux){
+//LuzEx = ((LuzExt + LuzEx) / 2);
+//}
+//delay_ms(2);
+//LuzExt = LuzEx;
+
+set_adc_channel(BATERIA);
+Vbatt = read_adc();
+//for(aux=0;aux<5;++aux){
+//Vbat = ((Vbatt + Vbat) / 2);
+//}
+//delay_ms(2);
+//Vbatt = Vbat;
+
+set_adc_channel(TEMP);
+ADCval = read_adc();
+TempNew = ADCval;
+
+TempNew = ((TempNew + TempOld) / 2);
+TempNew = ((TempNew + TempOld) / 2);
+TempNew = ((TempNew + TempOld) / 2);
+
+//for(aux=0;aux<3;++aux){
+//Tempp = ((Tempe + Tempp) / 2);
+//}
+//delay_ms(2);
+TempOld = TempNew;
+Tempe = TempOld;
+
+set_adc_channel(JUMPER);
+Jump = read_adc();
+//for(aux=0;aux<2;++aux){
+//Jumpp = ((Jump + Jumpp) / 2);
+//}
+//delay_ms(2);
+//Jump = Jumpp;
+
+set_adc_channel(FUENTE);
+Vf = read_adc();
+//for(aux=0;aux<5;++aux){
+//Font = ((Vf + Font) / 2);
+//}
+//delay_ms(2);
+//Vf = Font;
+
+}//fn

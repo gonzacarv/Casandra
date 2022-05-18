@@ -1,0 +1,516 @@
+
+ROM used:   47710/65536 (73%)
+            47710/65536 (73%) including unused fragments
+
+            7.8 Average locations per line
+            13.3 Average locations per statement
+
+RAM used:   491/3968 (12%) at main() level
+            567/3968 (14%) worst case
+
+Stack used: 8 worst case (6 in main + 2 for interrupts)
+Stack size: 31
+
+Lines Stmts  %   Files
+----- ----- ---  -----
+ 4877  3436  96  main.c
+  839     0   0  C:\Program Files\PICC\devices\18f4620.h
+  277    74   2  FLEX_LCD_164.c
+  154    85   2  DS1307.c
+----- -----
+ 6147  3595 Total
+
+Page ROM  %  RAM    Vol Diff  Functions:
+---- --- --- ---    --- ----  ----------
+0     42   0    1             @delay_ms1
+0     32   0    1             @PUTCHAR_BIU_1
+0     24   0    0             @GETCH_BIU_1
+0     20   0    0             @const653
+0     66   0    1    328  2.7  lcd_send_nibble
+0     54   0    1    362  2.3  lcd_read_nibble
+0     40   0    3    165  3.3  lcd_read_byte
+0     78   0    3    319  4.1  lcd_send_byte
+0    142   0    2    384  4.4  lcd_init
+0     72   0    4    336  6.0  lcd_gotoxy
+0     34   0    0             @goto10661
+0    104   0    1    275  3.9  lcd_putc
+0     76   0    3             @I2C_READ_1
+0     82   0    1             @I2C_WRITE_1
+0     40   0    3    242  5.7  bin2bcd
+0     42   0    3    155  4.7  bcd2bin
+0    400   0    2    437  2.4  ds1307_init
+0    340   0    8    503  2.7  ds1307_set_date_time
+ Inline         5    383  3.1  ds1307_get_date
+ Inline         4    315  3.0  ds1307_get_time
+0    290   0    2   1125  6.3  MAIN
+0    250   0    0   6211  2.5  Defini
+0   1244   1    4   4294 11.5  VerTemp
+0      2   0    0             @const851
+0     32   0    2             @PSTRINGC_677
+0     16   0    0             @const859
+0     40   0    3             @PSTRINGCN_677
+0     36   0    2             @PSTRINGR_677
+0     28   0    0             @const863
+0     44   0    3             @DIV88
+0    216   0    6             @PRINTF_D_677
+0    216   0    6             @PRINTF_D0_677
+0     28   0    0             @const873
+0     26   0    0             @const874
+0    156   0    2             @PRINTF_U_677
+0     24   0    0             @const879
+0     24   0    0             @const880
+0     24   0    0             @const881
+0     24   0    0             @const882
+0     24   0    0             @const883
+0     24   0    0             @const884
+0     24   0    0             @const885
+0     40   0    0             @goto11628
+0     24   0    0             @const887
+0    354   0    0    547  3.1  DosVeinte
+0     54   0    2             @ITOF
+0    350   0   14             @DIVFF
+0     60   0    4             @SFTOI
+0    422   0    4   1043  4.8  VerTens
+0      2   0    0             @const899
+0     22   0    0             @const901
+0     22   0    0             @const902
+0     22   0    0             @const906
+0    192   0   13             @DIV3232
+0    238   0   13             @PRINTF_L32U_677FP
+0    440   0    4   1856  6.9  Fotocel
+0      2   0    0             @const913
+0     22   0    0             @const916
+0     22   0    0             @const917
+0     22   0    0             @const918
+0     22   0    0             @const919
+0     22   0    0             @const920
+0   1590   2    4   5207  8.3  Aluces
+0      2   0    0             @const921
+0     20   0    0             @const932
+0     20   0    0             @const933
+0     22   0    0             @const936
+0     24   0    0             @const937
+0     22   0    0             @const938
+0     24   0    0             @const939
+0     22   0    0             @const940
+0     22   0    0             @const941
+0     22   0    0             @const942
+0     22   0    0             @const943
+0     22   0    0             @const944
+0     22   0    0             @const945
+0   1688   2    4   5303  7.4  AHs
+0      2   0    0             @const946
+0     22   0    0             @const949
+0     22   0    0             @const950
+0     22   0    0             @const951
+0     22   0    0             @const952
+0     22   0    0             @const953
+0     22   0    0             @const954
+0     22   0    0             @const955
+0     22   0    0             @const956
+0     24   0    0             @const957
+0     22   0    0             @const958
+0     22   0    0             @const959
+0     24   0    0             @const960
+0     22   0    0             @const961
+0     24   0    0             @const962
+0     22   0    0             @const963
+0     22   0    0             @const964
+0     24   0    0             @const965
+0   2064   2    4   6711  9.6  ADias
+0      2   0    0             @const966
+0     20   0    0             @const976
+0     20   0    0             @const977
+0     20   0    0             @const978
+0     22   0    0             @const980
+0     22   0    0             @const981
+0     20   0    0             @const982
+0     20   0    0             @const984
+0     20   0    0             @const986
+0     20   0    0             @const988
+0     20   0    0             @const1004
+0     22   0    0             @const1006
+0     40   0    0             @goto12570
+0     22   0    0             @const1012
+0     22   0    0             @const1013
+0     22   0    0             @const1014
+0     22   0    0             @const1015
+0     22   0    0             @const1016
+0     22   0    0             @const1017
+0     22   0    0             @const1018
+0     20   0    0             @const1020
+0   5746   6    4  18217 11.0  LuzGrupo
+0      2   0    0             @const1021
+0     62   0    0             @goto13067
+0     22   0    0             @const1041
+0     22   0    0             @const1042
+0     22   0    0             @const1043
+0     22   0    0             @const1044
+0     22   0    0             @const1045
+0     22   0    0             @const1046
+0     22   0    0             @const1047
+0     22   0    0             @const1048
+0     22   0    0             @const1049
+0     22   0    0             @const1050
+0     22   0    0             @const1051
+0     22   0    0             @const1052
+0     22   0    0             @const1053
+0     22   0    0             @const1054
+0     22   0    0             @const1055
+0     22   0    0             @const1056
+0     22   0    0             @const1057
+0     22   0    0             @const1058
+0     22   0    0             @const1059
+0     22   0    0             @const1060
+0     22   0    0             @const1061
+0     22   0    0             @const1062
+0     22   0    0             @const1063
+0     22   0    0             @const1064
+0     22   0    0             @const1065
+0      4   0    0             @const1066
+0      4   0    0             @const1067
+0     18   0    0             @const1068
+0      4   0    0             @const1069
+0      4   0    0             @const1070
+0     18   0    0             @const1071
+0   1684   2    4   4603 10.4  LuzInt
+0      2   0    0             @const1072
+0     22   0    0             @const1079
+0     22   0    0             @const1080
+0     24   0    0             @const1081
+0     22   0    0             @const1082
+0     24   0    0             @const1083
+0     22   0    0             @const1084
+0     22   0    0             @const1085
+0     22   0    0             @const1086
+0     22   0    0             @const1087
+0     22   0    0             @const1088
+0   1050   1    4   2830  9.3  LuzOnOff
+0      2   0    0             @const1089
+0     22   0    0             @const1093
+0     24   0    0             @const1094
+0     22   0    0             @const1095
+0     22   0    0             @const1096
+0     22   0    0             @const1097
+0     22   0    0             @const1098
+0     22   0    0             @const1099
+0     22   0    0             @const1100
+0   1092   1    4   3800  8.5  ActAlarma
+0      2   0    0             @const1101
+0     22   0    0             @const1105
+0     22   0    0             @const1106
+0     22   0    0             @const1107
+0     22   0    0             @const1108
+0     22   0    0             @const1109
+0     22   0    0             @const1110
+0   1024   1    4   4162  8.0  ConfAlarma
+0      2   0    0             @const1120
+0     20   0    0             @const1128
+0     22   0    0             @const1132
+0     18   0    0             @const1133
+0     18   0    0             @const1134
+0     20   0    0             @const1135
+0     20   0    0             @const1136
+0     22   0    0             @const1137
+0     20   0    0             @const1138
+0     18   0    0             @const1139
+0     24   0    0             @const1140
+0     18   0    0             @const1141
+0     22   0    0             @const1142
+0   1076   1    4   8133 10.0  Autenticar
+0      2   0    0             @const1143
+0     38   0    0             @goto14008
+0     38   0    0             @goto14031
+0     38   0    0             @goto14054
+0     38   0    0             @goto14077
+0     22   0    0             @const1150
+0     10   0    0             @const1151
+0     10   0    0             @const1152
+0     10   0    0             @const1153
+0     10   0    0             @const1154
+0     10   0    0             @const1155
+0     10   0    0             @const1156
+0     38   0    0             @goto14104
+0      2   0    0             @const1159
+0     22   0    0             @const1160
+0     22   0    0             @const1161
+0      2   0    0             @const1163
+0     22   0    0             @const1164
+0     22   0    0             @const1165
+0   1876   2    4  15427  9.5  CClave
+0      2   0    0             @const1166
+0     50   0    0             @goto14188
+0     50   0    0             @goto14217
+0     50   0    0             @goto14246
+0     50   0    0             @goto14275
+0     22   0    0             @const1174
+0     10   0    0             @const1175
+0     10   0    0             @const1176
+0      8   0    0             @const1177
+0      8   0    0             @const1178
+0      8   0    0             @const1179
+0      8   0    0             @const1180
+0      8   0    0             @const1181
+0      8   0    0             @const1182
+0      8   0    0             @const1183
+0      8   0    0             @const1184
+0      8   0    0             @const1185
+0      8   0    0             @const1186
+0      8   0    0             @const1187
+0      8   0    0             @const1188
+0      8   0    0             @const1189
+0     50   0    0             @goto14330
+0      2   0    0             @const1191
+0     22   0    0             @const1192
+0     22   0    0             @const1193
+0      2   0    0             @const1194
+0     22   0    0             @const1195
+0     22   0    0             @const1196
+0   2700   3    4   9498  8.0  Ccasandra
+0      2   0    0             @const1197
+0     22   0    0             @const1224
+0     18   0    0             @const1225
+0     18   0    0             @const1226
+0     18   0    0             @const1227
+0      4   0    0             @const1229
+0      4   0    0             @const1232
+0      4   0    0             @const1235
+0     18   0    0             @const1237
+0     18   0    0             @const1238
+0     18   0    0             @const1239
+0      4   0    0             @const1241
+0      4   0    0             @const1244
+0      4   0    0             @const1247
+0     18   0    0             @const1249
+0     18   0    0             @const1250
+0     18   0    0             @const1251
+0      4   0    0             @const1253
+0      4   0    0             @const1256
+0      4   0    0             @const1259
+0    790   1    4   2589  7.4  CReset
+0      2   0    0             @const1265
+0     22   0    0             @const1267
+0     22   0    0             @const1268
+0     22   0    0             @const1269
+0     22   0    0             @const1270
+0      2   0    0             @const1271
+0     22   0    0             @const1272
+0   1960   2    4   8780 10.1  CHs
+0      2   0    0             @const1275
+0     26   0    0             @const1285
+0     26   0    0             @const1286
+0     26   0    0             @const1287
+0     26   0    0             @const1288
+0     26   0    0             @const1289
+0     26   0    0             @const1290
+0     26   0    0             @const1291
+0     40   0    0             @goto15124
+0     20   0    0             @const1293
+0     20   0    0             @const1294
+0     20   0    0             @const1296
+0     20   0    0             @const1297
+0     20   0    0             @const1298
+0     20   0    0             @const1299
+0     20   0    0             @const1300
+0     20   0    0             @const1301
+0     20   0    0             @const1302
+0     20   0    0             @const1303
+0     20   0    0             @const1304
+0     50   0    0             @goto15189
+0     22   0    0             @const1306
+0     12   0    0             @const1307
+0     22   0    0             @const1308
+0     12   0    0             @const1309
+0     14   0    0             @const1310
+0     12   0    0             @const1311
+0     12   0    0             @const1312
+0      8   0    0             @const1313
+0     10   0    0             @const1314
+0      8   0    0             @const1315
+0     12   0    0             @const1316
+0     10   0    0             @const1317
+0     12   0    0             @const1318
+0     14   0    0             @const1319
+0     12   0    0             @const1320
+0     14   0    0             @const1321
+0    860   1    3   2386  7.4  inicio
+0      2   0    0             @const1322
+0     22   0    0             @const1323
+0     22   0    0             @const1324
+0      2   0    0             @const1329
+0     44   0    1     32  1.0  DHT11_init
+0     64   0    2    330  6.5  get_byte
+0    208   0    5    838  7.0  get_data
+0     80   0    4    170  3.9  RDA_isr
+0     28   0    2    193  3.6  TIMER1_isr
+0     82   0    2    447  4.7  Comunica
+0   1084   1    4  13543  6.5  Teclado
+0    158   0    0             @goto15996
+0   3022   3    1  11981  7.5  Pantalla
+0     26   0    0             @const1339
+0     24   0    0             @const1340
+0     24   0    0             @const1341
+0     22   0    0             @const1342
+0     22   0    0             @const1343
+0     22   0    0             @const1344
+0     22   0    0             @const1345
+0     22   0    0             @const1346
+0     22   0    0             @const1347
+0     22   0    0             @const1348
+0     22   0    0             @const1351
+0     22   0    0             @const1352
+0     22   0    0             @const1353
+0     22   0    0             @const1354
+0     22   0    0             @const1355
+0     22   0    0             @const1356
+0     22   0    0             @const1357
+0     22   0    0             @const1358
+0     22   0    0             @const1359
+0     22   0    0             @const1360
+0     22   0    0             @const1361
+0     22   0    0             @const1362
+0     22   0    0             @const1363
+0     22   0    0             @const1364
+0     22   0    0             @const1365
+0     22   0    0             @const1366
+0     22   0    0             @const1367
+0     22   0    0             @const1368
+0     22   0    0             @const1369
+0     22   0    0             @const1370
+0     22   0    0             @const1371
+0     22   0    0             @const1372
+0     22   0    0             @const1373
+0     22   0    0             @const1374
+0     22   0    0             @const1375
+0     22   0    0             @const1376
+0     22   0    0             @const1377
+0     22   0    0             @const1378
+0     22   0    0             @const1379
+0     22   0    0             @const1380
+0     22   0    0             @const1381
+0     22   0    0             @const1382
+0     22   0    0             @const1383
+0     22   0    0             @const1384
+0     22   0    0             @const1385
+0     22   0    0             @const1386
+0     22   0    0             @const1387
+0     22   0    0             @const1388
+0     22   0    0             @const1389
+0     22   0    0             @const1390
+0     22   0    0             @const1391
+0     22   0    0             @const1392
+0     22   0    0             @const1393
+0     22   0    0             @const1394
+0     22   0    0             @const1395
+0     22   0    0             @const1396
+0     22   0    0             @const1397
+0     22   0    0             @const1398
+0     22   0    0             @const1399
+0     22   0    0             @const1400
+0     22   0    0             @const1401
+0     22   0    0             @const1402
+0     22   0    0             @const1403
+0     22   0    0             @const1404
+0     22   0    0             @const1405
+0     22   0    0             @const1406
+0     22   0    0             @const1407
+0     22   0    0             @const1408
+0     22   0    0             @const1409
+0     22   0    0             @const1410
+0     22   0    0             @const1411
+0     22   0    0             @const1412
+0     22   0    0             @const1413
+0     22   0    0             @const1414
+0     22   0    0             @const1415
+0     22   0    0             @const1416
+0     22   0    0             @const1417
+0     22   0    0             @const1418
+0     22   0    0             @const1419
+0     22   0    0             @const1420
+0     22   0    0             @const1421
+0     22   0    0             @const1422
+0     22   0    0             @const1423
+0     22   0    0             @const1424
+0     22   0    0             @const1425
+0     22   0    0             @const1426
+0     22   0    0             @const1427
+0     22   0    0             @const1428
+0     22   0    0             @const1429
+0     22   0    0             @const1430
+0    158   0    0             @goto16236
+0   1018   1    2   1766  6.8  Tiempo
+0     20   0    0             @const1434
+0     20   0    0             @const1439
+0    948   1    1   3035  5.9  Ambiente
+0     94   0    4    333  3.2  Holding
+0      2   0    0             @const1456
+0     20   0    0             @const1457
+0     18   0    0             @const1458
+0     64   0    0    147  1.7  Notificador
+0      2   0    0             @const1459
+0     20   0    0             @const1460
+0     22   0    0             @const1461
+0    988   1    3   3858  5.4  AcercaDe
+0      2   0    0             @const1462
+0     22   0    0             @const1464
+0     22   0    0             @const1465
+0     22   0    0             @const1466
+0     22   0    0             @const1467
+0     22   0    0             @const1468
+0     22   0    0             @const1469
+0     22   0    0             @const1470
+0     22   0    0             @const1471
+0     22   0    0             @const1472
+0     22   0    0             @const1473
+0     22   0    0             @const1474
+0     22   0    0             @const1475
+0     22   0    0             @const1476
+0     22   0    0             @const1477
+0     22   0    0             @const1478
+0     22   0    0             @const1479
+0     22   0    0             @const1480
+0     22   0    0             @const1481
+0     22   0    0             @const1482
+0     22   0    0             @const1483
+0     22   0    0             @const1484
+0     22   0    0             @const1485
+0     22   0    0             @const1486
+0     22   0    0             @const1487
+0     22   0    0             @const1488
+0     22   0    0             @const1489
+0     22   0    0             @const1490
+0     22   0    0             @const1491
+0     22   0    0             @const1492
+0     22   0    0             @const1493
+0     22   0    0             @const1494
+0     22   0    0             @const1495
+0     22   0    0             @const1496
+0     22   0    0             @const1497
+0     22   0    0             @const1498
+0     22   0    0             @const1499
+0     22   0    0             @const1500
+0     22   0    0             @const1501
+0     22   0    0             @const1502
+ Inline         0             @cinit1
+
+Program metrics:
+    Functions               46
+    Statements              3595
+    Comments                1571
+    Volume (V)              240995
+    Difficulty (D)          262.4
+    Effort to implement (E) 63229374
+    Time to implement (T)   975 hours, 46 minutes
+    Est Delivered Bugs (B)  53
+    Cyclomatic Complexity   833
+    Maintainability (MI)    70
+
+ Segment     Used  Free
+-----------  ----  ----
+00000-00002     4  0  
+00004-00006     0  4  
+00008-000B8   178  0  
+000BA-0FFFE  47528  17822  
+
+
+

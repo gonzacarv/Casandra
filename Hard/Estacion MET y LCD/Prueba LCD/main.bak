@@ -1,0 +1,28 @@
+#include <18f2550.h>
+
+
+//#device adc=10 //Usa resolución de 10 bits
+#fuses HS,NOWDT,PUT, NOPROTECT, NOBROWNOUT,NOLVP,NOCPD       
+#use delay(clock=4000000)
+#include <flex_lcd.c>
+//#include <internal_eeprom.c>
+
+
+
+void main(){
+
+lcd_init();
+      lcd_putc("\f");
+while(1){
+
+      lcd_gotoxy(1,4);
+      printf (lcd_putc,"   CASANDRA v1.0   ");
+ //     lcd_gotoxy(1,2);
+   //   printf (lcd_putc,"Exterior: 18C 25H");
+     // lcd_gotoxy(1,3);
+     // printf (lcd_putc,"  Gonzalo Carvalllo ");
+     // lcd_gotoxy(1,4);
+     // printf (lcd_putc," gonzacarvgmail.com");
+}
+
+}

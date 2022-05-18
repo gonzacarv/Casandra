@@ -1,0 +1,467 @@
+#include <16F877A.h>
+#fuses XT, NOWDT, NOPROTECT, NOLVP, PUT, NOBROWNOUT // Opciones de configuración
+#use delay(clock=4000000)  //Reloj de 4MHz
+
+////////// Tipo de entradas y salidas (predefinidas con TRIS) ///////////
+
+#use fast_io(a)
+#use fast_io(b)
+#use fast_io(c)
+#use fast_io(d)
+
+#use rs232(baud=9600, xmit=PIN_C6, rcv=PIN_C7, enable=PIN_C5) // Comunicacion serial
+
+////////// Nombres para las entradas para el sistema de buses //////// En total son 60 --> desde 62(>) a 122(z)
+//////////////////////////////Corresponde a MODULO NUMERO 1//////////////////////////////////////////
+#define LUZ0 62
+#define LUZ1 63
+#define LUZ2 64
+#define LUZ3 65
+#define LUZ4 66
+#define LUZ5 67
+#define LUZ6 68
+#define LUZ7 69
+#define LUZ8 70
+#define LUZ9 71
+#define LUZ10 72
+#define LUZ11 73
+#define ALRM 42 // (*) Para todos los modulos
+
+
+////////// Nombres para las entradas ////////
+#define IN1 PIN_D1
+#define IN2 PIN_D0
+#define IN3 PIN_C3
+#define IN4 PIN_C2
+#define IN5 PIN_C1
+#define IN6 PIN_C0
+#define IN7 PIN_D6
+#define IN8 PIN_D5
+#define IN9 PIN_D4
+#define IN10 PIN_C4
+#define IN11 PIN_D3
+#define IN12 PIN_D2
+
+////////// Nombres para las salidas ////////
+#define OUT1 PIN_B1
+#define OUT2 PIN_B2
+#define OUT3 PIN_B3 
+#define OUT4 PIN_B4
+#define OUT5 PIN_B5
+#define OUT6 PIN_B6
+#define OUT7 PIN_B7
+#define OUT8 PIN_A0
+#define OUT9 PIN_A1
+#define OUT10 PIN_A2
+#define OUT11 PIN_E0
+#define OUT12 PIN_A5
+
+////////// Nombres para entradas analogicas del ADC ////////
+#define ANA1 PIN_A5
+#define ANA2 PIN_E0
+#define ANA3 PIN_E1
+#define ANA4 PIN_E2
+
+////////// Otros nombres ///////////////
+#define LED PIN_D7 // Piloto led del modulo
+#define LEDON output_low(LED)     /// Comando rapido para el encendido y 
+#define LEDOFF output_high(LED)   /// apagado del piloto LED.
+#define CruX PIN_B0 // Entrada de cruce por cero
+
+////////// Encabezado de funciones ///////////////
+void Cruce(); // Funcion de cruce por 0 que reinicia el timer
+void Comunica(); // Funcion de lectura de puerto serial y armado del comando
+void Entradas(); // Funcion de lectura de las entradas
+void Analogicos(); // Funcion de toma de valores analogicos
+void Salidas(); // Funcion de Salida de luces
+
+
+////////// Variables Globales ///////////////
+int Comando[4]; // Carga de EVENTO y VALOR
+int LuzConf[3][12]; // Arreglo de configuracion de luces
+short LuzEstado[12]; // Arreglo de Estado de luces
+short TeclaEstado[12]; // Arreglo de Estado de las teclas
+int EstadoAlarma; // Variable de control de estado de la alarma/casandra
+long Tpo; // Valor del timer1
+int i=0; // Contador multiproposito
+long ii=0; // Contador largo multiproposito*/
+
+void main(){
+
+set_tris_a(0b00001011);  // Puerto A como salidas, menos A0, A1 y A3 que son entradas analogicas.
+set_tris_b(0b00000001);  // Puerto B, todas salidas, menos B0 que es el cruce por cero
+set_tris_c(0b10011111);  // Puerto C, de 0 a 4 -> entradas; 5 y 6 para RS232 salidas; C7 es RX -> Entrada
+set_tris_d(0b01111111);  // Puerto D, todas entradas menos el Piloto (D7)
+
+setup_adc_ports(RA0_RA1_Ra3_ANALOG);  // Entradas analogicas.
+setup_adc(ADC_CLOCK_INTERNAL);  // Barrido ¿Hace falta?
+
+setup_timer_1(T1_INTERNAL | T1_DIV_BY_1);
+enable_interrupts(global);
+//disable_interrupts(global);
+enable_interrupts(int_ext);
+
+
+delay_ms(500);
+output_high(OUT12);
+delay_ms(500);
+output_low(OUT12);
+delay_ms(500);
+output_high(OUT12);
+delay_ms(500);
+output_low(OUT12);
+delay_ms(500);
+output_high(OUT12);
+delay_ms(500);
+output_low(OUT12);
+
+
+while (1){
+
+if (i) Salidas();  // Actuamos
+else{
+Comunica(); // Leemos bus de datos
+Entradas(); // Leemos entradas
+}
+++i;
+/*
+Salidas();
+Comunica(); // Leemos bus de datos
+Entradas(); // Leemos entradas
+*/
+
+} // while 1
+
+} // main
+
+
+#int_ext
+void Cruce(){
+//if (input(IN1)) {
+//ii=ii+10;
+//printf(" %Lu ",ii);
+//}
+set_timer1(0);
+}
+
+void Comunica(){  /// CODIFICACION: 48 (0) .. 57 (9)
+                  ///               65 (A) .. 74 (J)
+                  ///               77 (M) .. 86 (V)
+                  ///                           88X
+                  ///                           90Z
+if (kbhit()){
+Comando[i]=getc();
+delay_ms(1000);
+printf("Comando --> %c%c%c%c%c",Comando[0], Comando[1], Comando[2], Comando[3], Comando[4]);
+i++;
+if (i>=4){
+i=0;
+if ((Comando[1] == 60) || (Comando[4] == 60)){ // Prueba de inicio y final de trama
+//if ((Comando[2]+Comando[3]) == Comando[4]){ // Prueba de checksum
+
+switch (Comando[2]){
+
+Case LUZ0:
+   if ((Comando[3]>=48) && (Comando[3]<=57)) LuzConf[0][0]=Comando[3]; // Valor de Dia
+   if ((Comando[3]>=65) && (Comando[3]<=74)) LuzConf[1][0]=Comando[3]; // Valor de Noche
+   if ((Comando[3]>=77) && (Comando[3]<=86)) LuzConf[2][0]=Comando[3]; // Valor de Noche2
+//   if ((Comando[3]>=40) && (Comando[3]<=49)) LuzConf[3][0]=Comando[3]; // Valor de reserva
+
+   if (Comando[3]==88) LuzEstado[0]=True; // Prende la Luz
+   if (Comando[3]==90) LuzEstado[0]=False; // Apaga la Luz
+break;
+
+Case LUZ1:
+   if ((Comando[3]>=48) && (Comando[3]<=57)) LuzConf[0][1]=Comando[3]; // Valor de Dia
+   if ((Comando[3]>=65) && (Comando[3]<=74)) LuzConf[1][1]=Comando[3]; // Valor de Noche
+   if ((Comando[3]>=77) && (Comando[3]<=86)) LuzConf[2][1]=Comando[3]; // Valor de Noche2
+//   if ((Comando[3]>=40) && (Comando[3]<=49)) LuzConf[3][0]=Comando[3]; // Valor de reserva
+
+   if (Comando[3]==88) LuzEstado[1]=True; // Prende la Luz
+   if (Comando[3]==90) LuzEstado[1]=False; // Apaga la Luz
+break;
+
+Case LUZ2:
+   if ((Comando[3]>=48) && (Comando[3]<=57)) LuzConf[0][2]=Comando[3]; // Valor de Dia
+   if ((Comando[3]>=65) && (Comando[3]<=74)) LuzConf[1][2]=Comando[3]; // Valor de Noche
+   if ((Comando[3]>=77) && (Comando[3]<=86)) LuzConf[2][2]=Comando[3]; // Valor de Noche2
+//   if ((Comando[3]>=40) && (Comando[3]<=49)) LuzConf[3][0]=Comando[3]; // Valor de reserva
+
+   if (Comando[3]==88) LuzEstado[2]=True; // Prende la Luz
+   if (Comando[3]==90) LuzEstado[2]=False; // Apaga la Luz
+break;
+
+Case LUZ3:
+   if ((Comando[3]>=48) && (Comando[3]<=57)) LuzConf[0][3]=Comando[3]; // Valor de Dia
+   if ((Comando[3]>=65) && (Comando[3]<=74)) LuzConf[1][3]=Comando[3]; // Valor de Noche
+   if ((Comando[3]>=77) && (Comando[3]<=86)) LuzConf[2][3]=Comando[3]; // Valor de Noche2
+//   if ((Comando[3]>=40) && (Comando[3]<=49)) LuzConf[3][0]=Comando[3]; // Valor de reserva
+
+   if (Comando[3]==88) LuzEstado[3]=True; // Prende la Luz
+   if (Comando[3]==90) LuzEstado[3]=False; // Apaga la Luz
+break;
+
+Case LUZ4:
+   if ((Comando[3]>=48) && (Comando[3]<=57)) LuzConf[0][4]=Comando[3]; // Valor de Dia
+   if ((Comando[3]>=65) && (Comando[3]<=74)) LuzConf[1][4]=Comando[3]; // Valor de Noche
+   if ((Comando[3]>=77) && (Comando[3]<=86)) LuzConf[2][4]=Comando[3]; // Valor de Noche2
+//   if ((Comando[3]>=40) && (Comando[3]<=49)) LuzConf[3][0]=Comando[3]; // Valor de reserva
+
+   if (Comando[3]==88) LuzEstado[4]=True; // Prende la Luz
+   if (Comando[3]==90) LuzEstado[4]=False; // Apaga la Luz
+break;
+
+Case LUZ5:
+   if ((Comando[3]>=48) && (Comando[3]<=57)) LuzConf[0][5]=Comando[3]; // Valor de Dia
+   if ((Comando[3]>=65) && (Comando[3]<=74)) LuzConf[1][5]=Comando[3]; // Valor de Noche
+   if ((Comando[3]>=77) && (Comando[3]<=86)) LuzConf[2][5]=Comando[3]; // Valor de Noche2
+//   if ((Comando[3]>=40) && (Comando[3]<=49)) LuzConf[3][0]=Comando[3]; // Valor de reserva
+
+   if (Comando[3]==88) LuzEstado[5]=True; // Prende la Luz
+   if (Comando[3]==90) LuzEstado[5]=False; // Apaga la Luz
+break;
+
+Case LUZ6:
+   if ((Comando[3]>=48) && (Comando[3]<=57)) LuzConf[0][6]=Comando[3]; // Valor de Dia
+   if ((Comando[3]>=65) && (Comando[3]<=74)) LuzConf[1][6]=Comando[3]; // Valor de Noche
+   if ((Comando[3]>=77) && (Comando[3]<=86)) LuzConf[2][6]=Comando[3]; // Valor de Noche2
+//   if ((Comando[3]>=40) && (Comando[3]<=49)) LuzConf[3][0]=Comando[3]; // Valor de reserva
+
+   if (Comando[3]==88) LuzEstado[6]=True; // Prende la Luz
+   if (Comando[3]==90) LuzEstado[6]=False; // Apaga la Luz
+break;
+
+Case LUZ7:
+   if ((Comando[3]>=48) && (Comando[3]<=57)) LuzConf[0][7]=Comando[3]; // Valor de Dia
+   if ((Comando[3]>=65) && (Comando[3]<=74)) LuzConf[1][7]=Comando[3]; // Valor de Noche
+   if ((Comando[3]>=77) && (Comando[3]<=86)) LuzConf[2][7]=Comando[3]; // Valor de Noche2
+//   if ((Comando[3]>=40) && (Comando[3]<=49)) LuzConf[3][0]=Comando[3]; // Valor de reserva
+
+   if (Comando[3]==88) LuzEstado[7]=True; // Prende la Luz
+   if (Comando[3]==90) LuzEstado[7]=False; // Apaga la Luz
+break;
+
+Case LUZ8:
+   if ((Comando[3]>=48) && (Comando[3]<=57)) LuzConf[0][8]=Comando[3]; // Valor de Dia
+   if ((Comando[3]>=65) && (Comando[3]<=74)) LuzConf[1][8]=Comando[3]; // Valor de Noche
+   if ((Comando[3]>=77) && (Comando[3]<=86)) LuzConf[2][8]=Comando[3]; // Valor de Noche2
+//   if ((Comando[3]>=40) && (Comando[3]<=49)) LuzConf[3][0]=Comando[3]; // Valor de reserva
+
+   if (Comando[3]==88) LuzEstado[8]=True; // Prende la Luz
+   if (Comando[3]==90) LuzEstado[8]=False; // Apaga la Luz
+break;
+
+Case LUZ9:
+   if ((Comando[3]>=48) && (Comando[3]<=57)) LuzConf[0][9]=Comando[3]; // Valor de Dia
+   if ((Comando[3]>=65) && (Comando[3]<=74)) LuzConf[1][9]=Comando[3]; // Valor de Noche
+   if ((Comando[3]>=77) && (Comando[3]<=86)) LuzConf[2][9]=Comando[3]; // Valor de Noche2
+//   if ((Comando[3]>=40) && (Comando[3]<=49)) LuzConf[3][0]=Comando[3]; // Valor de reserva
+
+   if (Comando[3]==88) LuzEstado[9]=True; // Prende la Luz
+   if (Comando[3]==90) LuzEstado[9]=False; // Apaga la Luz
+break;
+
+Case LUZ10:
+   if ((Comando[3]>=48) && (Comando[3]<=57)) LuzConf[0][10]=Comando[3]; // Valor de Dia
+   if ((Comando[3]>=65) && (Comando[3]<=74)) LuzConf[1][10]=Comando[3]; // Valor de Noche
+   if ((Comando[3]>=77) && (Comando[3]<=86)) LuzConf[2][10]=Comando[3]; // Valor de Noche2
+//   if ((Comando[3]>=40) && (Comando[3]<=49)) LuzConf[3][0]=Comando[3]; // Valor de reserva
+
+   if (Comando[3]==88) LuzEstado[10]=True; // Prende la Luz
+   if (Comando[3]==90) LuzEstado[10]=False; // Apaga la Luz
+break;
+
+Case LUZ11:
+   if ((Comando[3]>=48) && (Comando[3]<=57)) LuzConf[0][11]=Comando[3]; // Valor de Dia
+   if ((Comando[3]>=65) && (Comando[3]<=74)) LuzConf[1][11]=Comando[3]; // Valor de Noche
+   if ((Comando[3]>=77) && (Comando[3]<=86)) LuzConf[2][11]=Comando[3]; // Valor de Noche2
+//   if ((Comando[3]>=40) && (Comando[3]<=49)) LuzConf[3][0]=Comando[3]; // Valor de reserva
+
+   if (Comando[3]==88) LuzEstado[11]=True; // Prende la Luz
+   if (Comando[3]==90) LuzEstado[11]=False; // Apaga la Luz
+break;
+
+Case ALRM:
+   EstadoAlarma=Comando[3];
+break;
+
+
+
+} // Switch
+
+//} // if checksum
+} // if comando
+} // if i
+} // if kbhit
+} //fn
+
+void Entradas(){
+
+if ( (input(IN1)) ^ TeclaEstado[0] ){  // Si cambia la tecla
+TeclaEstado[0]=input(IN1); // Gurdamos el Cambio
+if ((LuzEstado[0]) == false) {
+puts("<<>X<"); //PRENDO
+LuzEstado[0]=true;
+} else {
+puts("<<>Z<"); //APAGO
+LuzEstado[0]=false;
+}
+}
+
+if ( (input(IN2)) ^ TeclaEstado[1] ){  // Si cambia la tecla
+TeclaEstado[1]=input(IN2); // Gurdamos el Cambio
+if ((LuzEstado[1]) == false) {
+puts("<<?X<"); //PRENDO
+LuzEstado[1]=true;
+} else {
+puts("<<?Z<"); //APAGO
+LuzEstado[1]=false;
+}
+}
+
+if ( (input(IN3)) ^ TeclaEstado[2] ){  // Si cambia la tecla
+TeclaEstado[2]=input(IN3); // Gurdamos el Cambio
+if ((LuzEstado[2]) == false) {
+puts("<<@X<"); //PRENDO
+LuzEstado[2]=true;
+} else {
+puts("<<@Z<"); //APAGO
+LuzEstado[2]=false;
+}
+}
+
+if ( (input(IN4)) ^ TeclaEstado[3] ){  // Si cambia la tecla
+TeclaEstado[3]=input(IN4); // Gurdamos el Cambio
+if ((LuzEstado[3]) == false) {
+puts("<<AX<"); //PRENDO
+LuzEstado[3]=true;
+} else {
+puts("<<AZ<"); //APAGO
+LuzEstado[3]=false;
+}
+}
+
+if ( (input(IN5)) ^ TeclaEstado[4] ){  // Si cambia la tecla
+TeclaEstado[4]=input(IN5); // Gurdamos el Cambio
+if ((LuzEstado[4]) == false) {
+puts("<<BX<"); //PRENDO
+LuzEstado[4]=true;
+} else {
+puts("<<BZ<"); //APAGO
+LuzEstado[4]=false;
+}
+}
+
+if ( (input(IN6)) ^ TeclaEstado[5] ){  // Si cambia la tecla
+TeclaEstado[5]=input(IN6); // Gurdamos el Cambio
+if ((LuzEstado[5]) == false) {
+puts("<<CX<"); //PRENDO
+LuzEstado[5]=true;
+} else {
+puts("<<CZ<"); //APAGO
+LuzEstado[5]=false;
+}
+}
+
+if ( (input(IN7)) ^ TeclaEstado[6] ){  // Si cambia la tecla
+TeclaEstado[6]=input(IN7); // Gurdamos el Cambio
+if ((LuzEstado[6]) == false) {
+puts("<<DX<"); //PRENDO
+LuzEstado[6]=true;
+} else {
+puts("<<DZ<"); //APAGO
+LuzEstado[6]=false;
+}
+}
+
+if ( (input(IN8)) ^ TeclaEstado[7] ){  // Si cambia la tecla
+TeclaEstado[7]=input(IN8); // Gurdamos el Cambio
+if ((LuzEstado[7]) == false) {
+puts("<<EX<"); //PRENDO
+LuzEstado[7]=true;
+} else {
+puts("<<EZ<"); //APAGO
+LuzEstado[7]=false;
+}
+}
+
+if ( (input(IN9)) ^ TeclaEstado[8] ){  // Si cambia la tecla
+TeclaEstado[8]=input(IN9); // Gurdamos el Cambio
+if ((LuzEstado[8]) == false) {
+puts("<<FX<"); //PRENDO
+LuzEstado[8]=true;
+} else {
+puts("<<FZ<"); //APAGO
+LuzEstado[8]=false;
+}
+}
+
+if ( (input(IN10)) ^ TeclaEstado[9] ){  // Si cambia la tecla
+TeclaEstado[9]=input(IN10); // Gurdamos el Cambio
+if ((LuzEstado[9]) == false) {
+puts("<<GX<"); //PRENDO
+LuzEstado[9]=true;
+} else {
+puts("<<GZ<"); //APAGO
+LuzEstado[9]=false;
+}
+}
+
+if ( (input(IN11)) ^ TeclaEstado[10] ){  // Si cambia la tecla
+TeclaEstado[10]=input(IN11); // Gurdamos el Cambio
+if ((LuzEstado[10]) == false) {
+puts("<<HX<"); //PRENDO
+LuzEstado[10]=true;
+} else {
+puts("<<HZ<"); //APAGO
+LuzEstado[10]=false;
+}
+}
+
+if ( (input(IN12)) ^ TeclaEstado[11] ){  // Si cambia la tecla
+TeclaEstado[11]=input(IN12); // Gurdamos el Cambio
+if ((LuzEstado[11]) == false) {
+puts("<<IX<"); //PRENDO
+LuzEstado[11]=true;
+} else {
+puts("<<IZ<"); //APAGO
+LuzEstado[11]=false;
+}
+}
+
+ 
+}
+
+
+
+void Salidas(){
+
+//Tpo = (int) (get_timer1() / 940);
+
+
+Tpo = get_timer1();
+
+if ((Tpo > ii) && (Tpo < ii + 500)) {
+output_high(OUT6);
+}
+
+if ((Tpo > ii + 10000) && (Tpo < ii + 10500)) {
+output_high(OUT6);
+}
+
+if (input(IN1)) ii = 0;
+if (input(IN2)) ii = 940;
+if (input(IN3)) ii = 1880;
+if (input(IN4)) ii = 2820;
+if (input(IN5)) ii = 3760;
+if (input(IN6)) ii = 4700;
+if (input(IN7)) ii = 5640;
+if (input(IN8)) ii = 6580;
+if (input(IN9)) ii = 7520;
+if (input(IN10)) ii = 8460;
+if (input(IN11)) ii = 9400;
+if (input(IN12)) ii = 10340;
+
+output_low(OUT6);
+}
+

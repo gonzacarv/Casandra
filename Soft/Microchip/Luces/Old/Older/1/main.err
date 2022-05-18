@@ -1,0 +1,6 @@
+>>> Warning 203 "main.c" Line 162(1,1): Condition always TRUE
+>>> Warning 216 "main.c" Line 551(1,2): Interrupts disabled during call to prevent re-entrancy:  (Accion)
+>>> Warning 216 "main.c" Line 551(1,2): Interrupts disabled during call to prevent re-entrancy:  (@delay_ms1)
+      Memory usage:   ROM=19%      RAM=13% - 18%
+      0 Errors,  3 Warnings.
+Build Successful.

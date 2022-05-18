@@ -1,0 +1,2582 @@
+CCS PCM C Compiler, Version 5.025, 29880               18-nov-15 16:46
+
+               Filename:   D:\Dropbox\Gonzalo\Proyecto Casandra\Version final\Soft\Luces\4\main.lst
+
+               ROM used:   1761 words (21%)
+                           Largest free fragment is 2048
+               RAM used:   73 (20%) at main() level
+                           82 (22%) worst case
+               Stack used: 3 locations (2 in main + 1 for interrupts)
+               Stack size: 8
+
+*
+0000:  MOVLW  06
+0001:  MOVWF  0A
+0002:  GOTO   6C1
+0003:  NOP
+0004:  MOVWF  7F
+0005:  SWAPF  03,W
+0006:  CLRF   03
+0007:  MOVWF  21
+0008:  MOVF   0A,W
+0009:  MOVWF  20
+000A:  CLRF   0A
+000B:  MOVF   04,W
+000C:  MOVWF  22
+000D:  MOVF   77,W
+000E:  MOVWF  23
+000F:  MOVF   78,W
+0010:  MOVWF  24
+0011:  MOVF   79,W
+0012:  MOVWF  25
+0013:  MOVF   7A,W
+0014:  MOVWF  26
+0015:  BCF    03.7
+0016:  BCF    03.5
+0017:  BTFSS  0B.4
+0018:  GOTO   01B
+0019:  BTFSC  0B.1
+001A:  GOTO   038
+001B:  MOVLW  8C
+001C:  MOVWF  04
+001D:  BTFSS  00.5
+001E:  GOTO   021
+001F:  BTFSC  0C.5
+0020:  GOTO   03B
+0021:  MOVLW  8C
+0022:  MOVWF  04
+0023:  BTFSS  00.1
+0024:  GOTO   027
+0025:  BTFSC  0C.1
+0026:  GOTO   03E
+0027:  MOVF   22,W
+0028:  MOVWF  04
+0029:  MOVF   23,W
+002A:  MOVWF  77
+002B:  MOVF   24,W
+002C:  MOVWF  78
+002D:  MOVF   25,W
+002E:  MOVWF  79
+002F:  MOVF   26,W
+0030:  MOVWF  7A
+0031:  MOVF   20,W
+0032:  MOVWF  0A
+0033:  SWAPF  21,W
+0034:  MOVWF  03
+0035:  SWAPF  7F,F
+0036:  SWAPF  7F,W
+0037:  RETFIE
+0038:  BCF    0A.3
+0039:  BCF    0A.4
+003A:  GOTO   041
+003B:  BCF    0A.3
+003C:  BCF    0A.4
+003D:  GOTO   049
+003E:  BCF    0A.3
+003F:  BCF    0A.4
+0040:  GOTO   0B7
+.................... /*====================================================================================================== 
+.................... ||   Proyecto: Casandra v1.0                                                                          || 
+.................... ||   Autor: Gonzalo Carvallo (gonzacarv@gmail.com)                                                    || 
+.................... ||   Fecha: 06/2014                                                                                   || 
+.................... ||   Compilador: PCWHD v5.025 (www.ccsinfo.com)                                                       || 
+.................... ||   Fuente: http://                                                                                  || 
+.................... ||                                                                                                    || 
+.................... || Firmware de modulos actuadores de luces correspondientes al sistema domotico CASANDRA. Capacidad   || 
+.................... || para actuar sobre 12 consumos y leer 12 entradas digitales + 2 analogicas. Comunicacion sobre par  || 
+.................... || trensado usando el transceptor SN75176.                                                            || 
+.................... ||                                                                                                    || 
+.................... ======================================================================================================*/ 
+....................  
+.................... #include <16F877A.h> // N4 
+.................... //////////// Standard Header file for the PIC16F877A device //////////////// 
+.................... /////////////////////////////////////////////////////////////////////////// 
+.................... ////        (C) Copyright 1996, 2013 Custom Computer Services          //// 
+.................... //// This source code may only be used by licensed users of the CCS C  //// 
+.................... //// compiler.  This source code may only be distributed to other      //// 
+.................... //// licensed users of the CCS C compiler.  No other use, reproduction //// 
+.................... //// or distribution is permitted without written permission.          //// 
+.................... //// Derivative programs created using this software in object code    //// 
+.................... //// form are not restricted in any way.                               //// 
+.................... /////////////////////////////////////////////////////////////////////////// 
+.................... #device PIC16F877A 
+....................  
+.................... #list 
+....................  
+.................... #fuses XT, WDT, NOPROTECT, NOLVP, PUT//, NOBROWNOUT // Opciones de configuración 
+.................... #use delay(clock=4000000)  //Reloj de 4MHz 
+*
+01B8:  MOVLW  65
+01B9:  MOVWF  04
+01BA:  BCF    03.7
+01BB:  MOVF   00,W
+01BC:  BTFSC  03.2
+01BD:  GOTO   1CC
+01BE:  MOVLW  01
+01BF:  MOVWF  78
+01C0:  CLRF   77
+01C1:  DECFSZ 77,F
+01C2:  GOTO   1C1
+01C3:  DECFSZ 78,F
+01C4:  GOTO   1C0
+01C5:  MOVLW  4A
+01C6:  MOVWF  77
+01C7:  DECFSZ 77,F
+01C8:  GOTO   1C7
+01C9:  GOTO   1CA
+01CA:  DECFSZ 00,F
+01CB:  GOTO   1BE
+01CC:  RETURN
+....................  
+.................... #byte TMR1H = 0x0F // Le pongo nombre al registro alto de timer 1 
+.................... #byte TMR1L = 0x0E // Le pongo nombre al registro bajo de timer 1 
+....................  
+.................... ////////// Tipo de entradas y salidas (predefinidas con TRIS) /////////// 
+....................  
+.................... #use fast_io(a) 
+.................... #use fast_io(b) 
+.................... #use fast_io(c) 
+.................... #use fast_io(d) 
+....................  
+.................... #use rs232(baud=2400, xmit=PIN_C6, rcv=PIN_C7, enable=PIN_C5, ERRORS) // Comunicacion serial 
+*
+0055:  BTFSS  0C.5
+0056:  GOTO   055
+0057:  MOVF   18,W
+0058:  MOVWF  27
+0059:  MOVF   1A,W
+005A:  MOVWF  78
+005B:  BTFSS  27.1
+005C:  GOTO   05F
+005D:  BCF    18.4
+005E:  BSF    18.4
+*
+01CD:  BSF    07.5
+01CE:  BTFSS  0C.4
+01CF:  GOTO   1CE
+01D0:  BSF    07.5
+01D1:  MOVF   68,W
+01D2:  MOVWF  19
+01D3:  NOP
+01D4:  BSF    03.5
+01D5:  BTFSS  18.1
+01D6:  GOTO   1D5
+01D7:  BCF    03.5
+01D8:  BCF    07.5
+01D9:  RETURN
+....................  
+.................... //////////////////////////////Corresponde a MODULO NUMERO 1////////////////////////////////////////// 
+.................... #define LUZ0 69 // Para modulo 4 
+.................... #define LUZ1 70 // Para modulo 4 
+.................... #define LUZ2 71 // Para modulo 4 
+.................... #define LUZ3 72 // Para modulo 4 
+.................... #define LUZ4 73 // Para modulo 4 
+.................... #define LUZ5 74 // Para modulo 4 
+.................... #define LUZ6 75 // Para modulo 4 
+.................... #define LUZ7 76 // Para modulo 4 
+.................... #define LUZ8 77 // Para modulo 4 
+.................... #define LUZ9 78 // Para modulo 4 
+.................... #define LUZ10 79 // Para modulo 4 
+.................... #define LUZ11 80 // Para modulo 4 
+.................... #define TODOS 100  // Para TODOS 
+....................  
+.................... //#define RESTA 33 // Para modulo 1 
+.................... //#define RESTA 45 // Para modulo 2 
+.................... //#define RESTA 57 // Para modulo 3 
+.................... #define RESTA 69 // Para modulo 4 
+.................... //#define RESTA 81 // Para modulo 5 
+....................  
+.................... ////////// Nombres para las entradas //////// 
+.................... #define IN1 PIN_D1 
+.................... #define IN2 PIN_D0 
+.................... #define IN3 PIN_C3 
+.................... #define IN4 PIN_C2 
+.................... #define IN5 PIN_C1 
+.................... #define IN6 PIN_C0 
+.................... #define IN7 PIN_D6 
+.................... #define IN8 PIN_D5 
+.................... #define IN9 PIN_D4 
+.................... #define IN10 PIN_C4 
+.................... #define IN11 PIN_D3 
+.................... #define IN12 PIN_D2 
+....................  
+.................... ////////// Nombres para las salidas //////// 
+.................... #define OUT1 PIN_B1 
+.................... #define OUT2 PIN_B2 
+.................... #define OUT3 PIN_B3  
+.................... #define OUT4 PIN_B4 
+.................... #define OUT5 PIN_B5 
+.................... #define OUT6 PIN_B6 
+.................... #define OUT7 PIN_B7 
+.................... #define OUT8 PIN_E1 
+.................... #define OUT9 PIN_E2 
+.................... #define OUT10 PIN_A2 
+.................... #define OUT11 PIN_E0 
+.................... #define OUT12 PIN_A5 
+....................  
+.................... ////////// Nombres para entradas analogicas del ADC //////// 
+.................... #define ANA1 PIN_A0 
+.................... #define ANA2 PIN_A1 
+.................... #define ANA3 PIN_A3 
+....................  
+.................... ////////// Otros nombres /////////////// 
+.................... #define LED PIN_D7 // Piloto led del modulo 
+.................... #define LEDON output_low(LED)     /// Comando rapido para el encendido y  
+.................... #define LEDOFF output_high(LED)   /// apagado del piloto LED. 
+.................... #define CruX PIN_B0 // Entrada de cruce por cero 
+....................  
+.................... ////////// Encabezado de funciones /////////////// 
+.................... void Cruce(); // Funcion de cruce por 0 que reinicia el timer, se ejecuta por interrupcion de B0 
+.................... void Comunica(); // Funcion de lectura de puerto serial y armado del comando, se ejecuta despues de que BusData tiene el comando lleno 
+.................... void Cambio(); // Cambio en la configuracion de alguna luz (incluida la variacion de tiempos cortos, debe ser periodica) 
+.................... void Entradas(); // Funcion de lectura de las entradas (periodica) 
+.................... void Analogicos(); // Funcion de toma de valores analogicos 
+.................... void Accion(); // Funcion de Salida de luces (solo se ejecuta por interrupcion del timer2) 
+.................... void BusDatax(); // LLego algo al bus de datos (solo se ejecuta por interrupcion de byte esperando en buffer) 
+.................... void HolaMundo(); // Funcion de inicio cargamos variables y configuraciones 
+.................... void BusData(int C1,int C2); // Hablamos por el bus con mejor repeticion 
+....................  
+....................  
+.................... ////////// Variables Globales /////////////// 
+.................... int Comando[4]; // Arreglo que contiene el comando una vez armado 
+.................... int LuzIntensidad[12]; // Arreglo de intensidad por defecto de luces (se guarda la config) 
+.................... int LuzAccion[12]; // Arreglo de intensidad instantanea de luces 
+.................... int LuzAccion2[12]; // Arreglo de intensidad instantanea de luces 2 
+.................... int LuzEstado[12]; // Arreglo de Estado de luces 
+.................... short TeclaEstado[12]; // Arreglo de Estado de las teclas 
+.................... short Teclas; // Bandera de bloqueo de teclas 
+.................... long Retraso; // Contador de retraso de cambio de estado en las telcas de luz para evitar ruido electromagnetico 
+.................... int i=0; // Contador puntero para armar el comando recibido por el bus 
+.................... int j=0; // Contador en interrupcion de cruce por cero para tiempos largos 
+....................  
+....................  
+.................... void main(){ 
+*
+06C1:  MOVF   03,W
+06C2:  ANDLW  1F
+06C3:  MOVWF  03
+06C4:  BCF    07.5
+06C5:  CLRF   27
+06C6:  MOVLW  19
+06C7:  BSF    03.5
+06C8:  MOVWF  19
+06C9:  MOVLW  A2
+06CA:  MOVWF  18
+06CB:  MOVLW  90
+06CC:  BCF    03.5
+06CD:  MOVWF  18
+06CE:  CLRF   61
+06CF:  CLRF   62
+06D0:  BSF    03.5
+06D1:  BSF    1F.0
+06D2:  BSF    1F.1
+06D3:  BSF    1F.2
+06D4:  BCF    1F.3
+06D5:  MOVLW  07
+06D6:  MOVWF  1C
+06D7:  BCF    03.7
+....................  
+.................... HolaMundo(); // Comenzamos la ejecucion preguntando configuracion y como nos apagamos la ultima vez 
+06D8:  BCF    03.5
+06D9:  GOTO   1FC
+....................  
+.................... /* //Para que funcione hay que deshabilitar la funcion de barrio de la salida 
+.................... while (1){ 
+.................... LEDON; 
+.................... delay_ms(500); 
+.................... LEDOFF; 
+.................... delay_ms(500); 
+.................... }*/ 
+....................  
+.................... while (1){ /////////////// LOOP PRINCIPAL DE MAIN /////////////////////////////// 
+....................  
+.................... if (Teclas == True) Entradas(); // Leemos entradas 
+06DA:  BTFSC  5E.0
+06DB:  GOTO   2F5
+.................... Cambio(); // Cambios periodicos 
+06DC:  GOTO   543
+.................... restart_wdt(); // Reiniciamos el perro 
+06DD:  CLRWDT
+.................... LEDOFF; 
+06DE:  BSF    08.7
+06DF:  GOTO   6DA
+.................... } // while 1 
+.................... } // main 
+....................  
+06E0:  SLEEP
+....................  
+.................... void BusData(int C1,int C2) { 
+.................... int Retrasox; 
+.................... Retrasox = 1; 
+*
+01DA:  MOVLW  01
+01DB:  MOVWF  66
+....................    while (Retrasox != 255){ 
+01DC:  INCFSZ 66,W
+01DD:  GOTO   1DF
+01DE:  GOTO   1E2
+....................    ++Retrasox; 
+01DF:  INCF   66,F
+....................    restart_wdt(); // Reiniciamos el perro 
+01E0:  CLRWDT
+01E1:  GOTO   1DC
+....................    } 
+....................    Retrasox = 1; 
+01E2:  MOVLW  01
+01E3:  MOVWF  66
+....................    printf("%c%c%c%c", 250, C1, C2, C1+C2);  
+01E4:  MOVF   65,W
+01E5:  ADDWF  64,W
+01E6:  MOVWF  67
+01E7:  MOVLW  FA
+01E8:  MOVWF  68
+01E9:  CALL   1CD
+01EA:  MOVF   64,W
+01EB:  MOVWF  68
+01EC:  CALL   1CD
+01ED:  MOVF   65,W
+01EE:  MOVWF  68
+01EF:  CALL   1CD
+01F0:  MOVF   67,W
+01F1:  MOVWF  68
+01F2:  CALL   1CD
+....................    while (Retrasox != 255){ 
+01F3:  INCFSZ 66,W
+01F4:  GOTO   1F6
+01F5:  GOTO   1F9
+....................    ++Retrasox; 
+01F6:  INCF   66,F
+....................    restart_wdt(); // Reiniciamos el perro 
+01F7:  CLRWDT
+01F8:  GOTO   1F3
+....................    } 
+....................    Retrasox = 1;/* 
+01F9:  MOVLW  01
+01FA:  MOVWF  66
+01FB:  RETURN
+....................    printf("%c%c%c%c", 250, C1, C2, C1+C2); 
+....................    while (Retraso != 255){ 
+....................    ++Retraso; 
+....................    restart_wdt(); // Reiniciamos el perro 
+....................    } 
+....................    Retraso = 1; 
+....................    printf("%c%c%c%c", 250, C1, C2, C1+C2);  
+....................    while (Retraso != 255){ 
+....................    ++Retraso; 
+....................    restart_wdt(); // Reiniciamos el perro 
+....................    } 
+....................    Retraso = 1; 
+....................    printf("%c%c%c%c", 250, C1, C2, C1+C2); */ 
+.................... } 
+....................  
+....................  
+.................... void Comunica(){ 
+.................... i=0; 
+*
+0075:  CLRF   61
+.................... if (( (Comando[0]) + (Comando[1]) ) == Comando[2]){ // Prueba de checksum 
+0076:  MOVF   29,W
+0077:  ADDWF  28,W
+0078:  SUBWF  2A,W
+0079:  BTFSS  03.2
+007A:  GOTO   0B3
+.................... if ( (((Comando[0])-RESTA) >= 0)&&(((Comando[0])-RESTA) <= 11) ) {  // Solo Luces individuales 
+007B:  MOVLW  45
+007C:  SUBWF  28,W
+007D:  MOVLW  45
+007E:  SUBWF  28,W
+007F:  SUBLW  0B
+0080:  BTFSS  03.0
+0081:  GOTO   096
+....................       LEDON; 
+0082:  BCF    08.7
+....................       if (Comando[1] < 40){ 
+0083:  MOVF   29,W
+0084:  SUBLW  27
+0085:  BTFSS  03.0
+0086:  GOTO   08F
+....................       LuzIntensidad[(Comando[0]-RESTA)]=Comando[1]; 
+0087:  MOVLW  45
+0088:  SUBWF  28,W
+0089:  ADDLW  2C
+008A:  MOVWF  04
+008B:  BCF    03.7
+008C:  MOVF   29,W
+008D:  MOVWF  00
+....................       } else { 
+008E:  GOTO   096
+....................       LuzEstado[(Comando[0]-RESTA)]=Comando[1]; 
+008F:  MOVLW  45
+0090:  SUBWF  28,W
+0091:  ADDLW  50
+0092:  MOVWF  04
+0093:  BCF    03.7
+0094:  MOVF   29,W
+0095:  MOVWF  00
+....................       } 
+.................... }// If 
+....................  
+.................... if ((Comando[0]) == TODOS){ // Para todas las luces 
+0096:  MOVF   28,W
+0097:  SUBLW  64
+0098:  BTFSS  03.2
+0099:  GOTO   0B3
+.................... int Cuenta; 
+.................... LEDON; 
+009A:  BCF    08.7
+....................    for (Cuenta=0;Cuenta<12;Cuenta++){ // llena todo desde el 0 al 11 
+009B:  CLRF   69
+009C:  MOVF   69,W
+009D:  SUBLW  0B
+009E:  BTFSS  03.0
+009F:  GOTO   0B3
+....................       if (Comando[1] < 40) { 
+00A0:  MOVF   29,W
+00A1:  SUBLW  27
+00A2:  BTFSS  03.0
+00A3:  GOTO   0AB
+....................       LuzIntensidad[Cuenta]=Comando[1]; 
+00A4:  MOVLW  2C
+00A5:  ADDWF  69,W
+00A6:  MOVWF  04
+00A7:  BCF    03.7
+00A8:  MOVF   29,W
+00A9:  MOVWF  00
+....................       } else { 
+00AA:  GOTO   0B1
+....................       LuzEstado[Cuenta]=Comando[1]; 
+00AB:  MOVLW  50
+00AC:  ADDWF  69,W
+00AD:  MOVWF  04
+00AE:  BCF    03.7
+00AF:  MOVF   29,W
+00B0:  MOVWF  00
+....................       } 
+00B1:  INCF   69,F
+00B2:  GOTO   09C
+.................... } //For 
+.................... } // If 
+.................... } // if checksum 
+.................... } //fn 
+....................  
+....................  
+.................... void Entradas() { 
+....................  
+.................... while ( (input(IN1)) ^ TeclaEstado[0] ){  // Si cambia la tecla 
+*
+02F5:  MOVLW  00
+02F6:  BTFSC  08.1
+02F7:  MOVLW  01
+02F8:  MOVWF  64
+02F9:  MOVLW  00
+02FA:  BTFSC  5C.0
+02FB:  MOVLW  01
+02FC:  XORWF  64,W
+02FD:  BTFSC  03.2
+02FE:  GOTO   325
+.................... Retraso = Retraso + 1; 
+02FF:  MOVLW  01
+0300:  ADDWF  5F,F
+0301:  BTFSC  03.0
+0302:  INCF   60,F
+.................... if (Retraso == 755) { 
+0303:  MOVF   5F,W
+0304:  SUBLW  F3
+0305:  BTFSS  03.2
+0306:  GOTO   324
+0307:  MOVF   60,W
+0308:  SUBLW  02
+0309:  BTFSS  03.2
+030A:  GOTO   324
+.................... Retraso = 0; 
+030B:  CLRF   60
+030C:  CLRF   5F
+.................... TeclaEstado[0]=input(IN1); // Gurdamos el Cambio 
+030D:  BCF    5C.0
+030E:  BTFSC  08.1
+030F:  BSF    5C.0
+.................... LEDON; 
+0310:  BCF    08.7
+.................... if (LuzEstado[0] != 90) { 
+0311:  MOVF   50,W
+0312:  SUBLW  5A
+0313:  BTFSC  03.2
+0314:  GOTO   31D
+.................... BusData(LUZ0,90); 
+0315:  MOVLW  45
+0316:  MOVWF  64
+0317:  MOVLW  5A
+0318:  MOVWF  65
+0319:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ0, 90, LUZ0 + 90); //PRENDO 
+.................... LuzEstado[0]=90; 
+031A:  MOVLW  5A
+031B:  MOVWF  50
+.................... } // si no es 90 (no esta encendida con intensidad) 
+031C:  GOTO   324
+.................... else { 
+.................... BusData(LUZ0,80); 
+031D:  MOVLW  45
+031E:  MOVWF  64
+031F:  MOVLW  50
+0320:  MOVWF  65
+0321:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ0, 80, LUZ0 + 80); //APAGO 
+.................... LuzEstado[0]=80; 
+0322:  MOVLW  50
+0323:  MOVWF  50
+.................... } // si no 
+.................... } // If retraso 
+0324:  GOTO   2F5
+.................... } // While 
+.................... Retraso = 0; 
+0325:  CLRF   60
+0326:  CLRF   5F
+....................  
+.................... while ( (input(IN2)) ^ TeclaEstado[1] ){  // Si cambia la tecla (Cuando aviso al bus de este cambio?) 
+0327:  MOVLW  00
+0328:  BTFSC  08.0
+0329:  MOVLW  01
+032A:  MOVWF  64
+032B:  MOVLW  00
+032C:  BTFSC  5C.1
+032D:  MOVLW  01
+032E:  XORWF  64,W
+032F:  BTFSC  03.2
+0330:  GOTO   357
+.................... Retraso = Retraso + 1; 
+0331:  MOVLW  01
+0332:  ADDWF  5F,F
+0333:  BTFSC  03.0
+0334:  INCF   60,F
+.................... if (Retraso == 755) { 
+0335:  MOVF   5F,W
+0336:  SUBLW  F3
+0337:  BTFSS  03.2
+0338:  GOTO   356
+0339:  MOVF   60,W
+033A:  SUBLW  02
+033B:  BTFSS  03.2
+033C:  GOTO   356
+.................... Retraso = 0; 
+033D:  CLRF   60
+033E:  CLRF   5F
+.................... TeclaEstado[1]=input(IN2); // Gurdamos el Cambio 
+033F:  BCF    5C.1
+0340:  BTFSC  08.0
+0341:  BSF    5C.1
+.................... LEDON; 
+0342:  BCF    08.7
+.................... if (LuzEstado[1] != 90) { 
+0343:  MOVF   51,W
+0344:  SUBLW  5A
+0345:  BTFSC  03.2
+0346:  GOTO   34F
+.................... BusData(LUZ1,90); 
+0347:  MOVLW  46
+0348:  MOVWF  64
+0349:  MOVLW  5A
+034A:  MOVWF  65
+034B:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ1, 90, LUZ1 + 90); //PRENDO 
+.................... LuzEstado[1]=90; 
+034C:  MOVLW  5A
+034D:  MOVWF  51
+.................... } // si no es 90 (no esta encendida con intensidad) 
+034E:  GOTO   356
+.................... else { 
+.................... BusData(LUZ1,80); 
+034F:  MOVLW  46
+0350:  MOVWF  64
+0351:  MOVLW  50
+0352:  MOVWF  65
+0353:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ1, 80, LUZ1 + 80); //APAGO 
+.................... LuzEstado[1]=80; 
+0354:  MOVLW  50
+0355:  MOVWF  51
+.................... } //Else 
+.................... } // If 
+0356:  GOTO   327
+.................... } // While 
+.................... Retraso = 0; 
+0357:  CLRF   60
+0358:  CLRF   5F
+....................  
+.................... while ( (input(IN3)) ^ TeclaEstado[2] ){  // Si cambia la tecla (Cuando aviso al bus de este cambio?) 
+0359:  MOVLW  00
+035A:  BTFSC  07.3
+035B:  MOVLW  01
+035C:  MOVWF  64
+035D:  MOVLW  00
+035E:  BTFSC  5C.2
+035F:  MOVLW  01
+0360:  XORWF  64,W
+0361:  BTFSC  03.2
+0362:  GOTO   389
+.................... Retraso = Retraso + 1; 
+0363:  MOVLW  01
+0364:  ADDWF  5F,F
+0365:  BTFSC  03.0
+0366:  INCF   60,F
+.................... if (Retraso == 755) { 
+0367:  MOVF   5F,W
+0368:  SUBLW  F3
+0369:  BTFSS  03.2
+036A:  GOTO   388
+036B:  MOVF   60,W
+036C:  SUBLW  02
+036D:  BTFSS  03.2
+036E:  GOTO   388
+.................... Retraso = 0; 
+036F:  CLRF   60
+0370:  CLRF   5F
+.................... TeclaEstado[2]=input(IN3); // Gurdamos el Cambio 
+0371:  BCF    5C.2
+0372:  BTFSC  07.3
+0373:  BSF    5C.2
+.................... LEDON; 
+0374:  BCF    08.7
+.................... if (LuzEstado[2] != 90) { 
+0375:  MOVF   52,W
+0376:  SUBLW  5A
+0377:  BTFSC  03.2
+0378:  GOTO   381
+.................... BusData(LUZ2,90); 
+0379:  MOVLW  47
+037A:  MOVWF  64
+037B:  MOVLW  5A
+037C:  MOVWF  65
+037D:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ2, 90, LUZ2 + 90); //PRENDO 
+.................... LuzEstado[2]=90; 
+037E:  MOVLW  5A
+037F:  MOVWF  52
+.................... } // si no es 90 (no esta encendida con intensidad) 
+0380:  GOTO   388
+.................... else { 
+.................... BusData(LUZ2,80); 
+0381:  MOVLW  47
+0382:  MOVWF  64
+0383:  MOVLW  50
+0384:  MOVWF  65
+0385:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ2, 80, LUZ2 + 80); //APAGO 
+.................... LuzEstado[2]=80; 
+0386:  MOVLW  50
+0387:  MOVWF  52
+.................... } //Else 
+.................... } // If 
+0388:  GOTO   359
+.................... } // While 
+.................... Retraso = 0; 
+0389:  CLRF   60
+038A:  CLRF   5F
+....................  
+.................... while ( (input(IN4)) ^ TeclaEstado[3] ){  // Si cambia la tecla (Cuando aviso al bus de este cambio?) 
+038B:  MOVLW  00
+038C:  BTFSC  07.2
+038D:  MOVLW  01
+038E:  MOVWF  64
+038F:  MOVLW  00
+0390:  BTFSC  5C.3
+0391:  MOVLW  01
+0392:  XORWF  64,W
+0393:  BTFSC  03.2
+0394:  GOTO   3B5
+.................... Retraso = Retraso + 1; 
+0395:  MOVLW  01
+0396:  ADDWF  5F,F
+0397:  BTFSC  03.0
+0398:  INCF   60,F
+.................... if (Retraso == 755) { 
+0399:  MOVF   5F,W
+039A:  SUBLW  F3
+039B:  BTFSS  03.2
+039C:  GOTO   3B4
+039D:  MOVF   60,W
+039E:  SUBLW  02
+039F:  BTFSS  03.2
+03A0:  GOTO   3B4
+.................... Retraso = 0; 
+03A1:  CLRF   60
+03A2:  CLRF   5F
+.................... TeclaEstado[3]=input(IN4); // Gurdamos el Cambio 
+03A3:  BCF    5C.3
+03A4:  BTFSC  07.2
+03A5:  BSF    5C.3
+.................... LEDON; 
+03A6:  BCF    08.7
+.................... if (input(IN4)) { 
+03A7:  BTFSS  07.2
+03A8:  GOTO   3AF
+.................... BusData(LUZ3,90); 
+03A9:  MOVLW  48
+03AA:  MOVWF  64
+03AB:  MOVLW  5A
+03AC:  MOVWF  65
+03AD:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ3, 90, LUZ3 + 90); //PRENDO 
+.................... //LuzEstado[3]=90;  Sensor del garage 
+.................... } // si no es 90 (no esta encendida con intensidad) 
+03AE:  GOTO   3B4
+.................... else { 
+.................... BusData(LUZ3,80); 
+03AF:  MOVLW  48
+03B0:  MOVWF  64
+03B1:  MOVLW  50
+03B2:  MOVWF  65
+03B3:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ3, 80, LUZ3 + 80); //APAGO 
+.................... //LuzEstado[3]=80; Sensor del Garage 
+.................... } //Else 
+.................... } // If 
+03B4:  GOTO   38B
+.................... } // While 
+.................... Retraso = 0; 
+03B5:  CLRF   60
+03B6:  CLRF   5F
+....................  
+.................... while ( (input(IN5)) ^ TeclaEstado[4] ){  // Si cambia la tecla (Cuando aviso al bus de este cambio?) 
+03B7:  MOVLW  00
+03B8:  BTFSC  07.1
+03B9:  MOVLW  01
+03BA:  MOVWF  64
+03BB:  MOVLW  00
+03BC:  BTFSC  5C.4
+03BD:  MOVLW  01
+03BE:  XORWF  64,W
+03BF:  BTFSC  03.2
+03C0:  GOTO   3E1
+.................... Retraso = Retraso + 1; 
+03C1:  MOVLW  01
+03C2:  ADDWF  5F,F
+03C3:  BTFSC  03.0
+03C4:  INCF   60,F
+.................... if (Retraso == 755) { 
+03C5:  MOVF   5F,W
+03C6:  SUBLW  F3
+03C7:  BTFSS  03.2
+03C8:  GOTO   3E0
+03C9:  MOVF   60,W
+03CA:  SUBLW  02
+03CB:  BTFSS  03.2
+03CC:  GOTO   3E0
+.................... Retraso = 0; 
+03CD:  CLRF   60
+03CE:  CLRF   5F
+.................... TeclaEstado[4]=input(IN5); // Gurdamos el Cambio 
+03CF:  BCF    5C.4
+03D0:  BTFSC  07.1
+03D1:  BSF    5C.4
+.................... LEDON; 
+03D2:  BCF    08.7
+.................... if (input(IN5)) { 
+03D3:  BTFSS  07.1
+03D4:  GOTO   3DB
+.................... BusData(LUZ4,90); 
+03D5:  MOVLW  49
+03D6:  MOVWF  64
+03D7:  MOVLW  5A
+03D8:  MOVWF  65
+03D9:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ4, 90, LUZ4 + 90); //PRENDO 
+.................... //LuzEstado[4]=90; //Pasillo lavadero 
+.................... } // si no es 90 (no esta encendida con intensidad) 
+03DA:  GOTO   3E0
+.................... else { 
+.................... BusData(LUZ4,80); 
+03DB:  MOVLW  49
+03DC:  MOVWF  64
+03DD:  MOVLW  50
+03DE:  MOVWF  65
+03DF:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ4, 80, LUZ4 + 80); //APAGO 
+.................... //LuzEstado[4]=80; //Pasillo lavadero 
+.................... } //Else 
+.................... } // If 
+03E0:  GOTO   3B7
+.................... } // While 
+.................... Retraso = 0; 
+03E1:  CLRF   60
+03E2:  CLRF   5F
+....................  
+.................... while ( (input(IN6)) ^ TeclaEstado[5] ){  // Si cambia la tecla (Cuando aviso al bus de este cambio?) 
+03E3:  MOVLW  00
+03E4:  BTFSC  07.0
+03E5:  MOVLW  01
+03E6:  MOVWF  64
+03E7:  MOVLW  00
+03E8:  BTFSC  5C.5
+03E9:  MOVLW  01
+03EA:  XORWF  64,W
+03EB:  BTFSC  03.2
+03EC:  GOTO   413
+.................... Retraso = Retraso + 1; 
+03ED:  MOVLW  01
+03EE:  ADDWF  5F,F
+03EF:  BTFSC  03.0
+03F0:  INCF   60,F
+.................... if (Retraso == 755) { 
+03F1:  MOVF   5F,W
+03F2:  SUBLW  F3
+03F3:  BTFSS  03.2
+03F4:  GOTO   412
+03F5:  MOVF   60,W
+03F6:  SUBLW  02
+03F7:  BTFSS  03.2
+03F8:  GOTO   412
+.................... Retraso = 0; 
+03F9:  CLRF   60
+03FA:  CLRF   5F
+.................... TeclaEstado[5]=input(IN6); // Gurdamos el Cambio 
+03FB:  BCF    5C.5
+03FC:  BTFSC  07.0
+03FD:  BSF    5C.5
+.................... LEDON; 
+03FE:  BCF    08.7
+.................... if (LuzEstado[5] != 90) { 
+03FF:  MOVF   55,W
+0400:  SUBLW  5A
+0401:  BTFSC  03.2
+0402:  GOTO   40B
+.................... BusData(LUZ5,90); 
+0403:  MOVLW  4A
+0404:  MOVWF  64
+0405:  MOVLW  5A
+0406:  MOVWF  65
+0407:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ5, 90, LUZ5 + 90); //PRENDO 
+.................... LuzEstado[5]=90; 
+0408:  MOVLW  5A
+0409:  MOVWF  55
+.................... } // si no es 90 (no esta encendida con intensidad) 
+040A:  GOTO   412
+.................... else { 
+.................... BusData(LUZ5,80); 
+040B:  MOVLW  4A
+040C:  MOVWF  64
+040D:  MOVLW  50
+040E:  MOVWF  65
+040F:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ5, 80, LUZ5 + 80); //APAGO 
+.................... LuzEstado[5]=80; 
+0410:  MOVLW  50
+0411:  MOVWF  55
+.................... } //Else 
+.................... } // If 
+0412:  GOTO   3E3
+.................... } // While 
+.................... Retraso = 0; 
+0413:  CLRF   60
+0414:  CLRF   5F
+....................  
+.................... while ( (input(IN7)) ^ TeclaEstado[6] ){  // Si cambia la tecla (Cuando aviso al bus de este cambio?) 
+0415:  MOVLW  00
+0416:  BTFSC  08.6
+0417:  MOVLW  01
+0418:  MOVWF  64
+0419:  MOVLW  00
+041A:  BTFSC  5C.6
+041B:  MOVLW  01
+041C:  XORWF  64,W
+041D:  BTFSC  03.2
+041E:  GOTO   445
+.................... Retraso = Retraso + 1; 
+041F:  MOVLW  01
+0420:  ADDWF  5F,F
+0421:  BTFSC  03.0
+0422:  INCF   60,F
+.................... if (Retraso == 755) { 
+0423:  MOVF   5F,W
+0424:  SUBLW  F3
+0425:  BTFSS  03.2
+0426:  GOTO   444
+0427:  MOVF   60,W
+0428:  SUBLW  02
+0429:  BTFSS  03.2
+042A:  GOTO   444
+.................... Retraso = 0; 
+042B:  CLRF   60
+042C:  CLRF   5F
+.................... TeclaEstado[6]=input(IN7); // Gurdamos el Cambio 
+042D:  BCF    5C.6
+042E:  BTFSC  08.6
+042F:  BSF    5C.6
+.................... LEDON; 
+0430:  BCF    08.7
+.................... if (LuzEstado[6] != 90) { 
+0431:  MOVF   56,W
+0432:  SUBLW  5A
+0433:  BTFSC  03.2
+0434:  GOTO   43D
+.................... BusData(LUZ6,90); 
+0435:  MOVLW  4B
+0436:  MOVWF  64
+0437:  MOVLW  5A
+0438:  MOVWF  65
+0439:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ6, 90, LUZ6 + 90); //PRENDO 
+.................... LuzEstado[6]=90; 
+043A:  MOVLW  5A
+043B:  MOVWF  56
+.................... } // si no es 90 (no esta encendida con intensidad) 
+043C:  GOTO   444
+.................... else { 
+.................... BusData(LUZ6,80); 
+043D:  MOVLW  4B
+043E:  MOVWF  64
+043F:  MOVLW  50
+0440:  MOVWF  65
+0441:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ6, 80, LUZ6 + 80); //APAGO 
+.................... LuzEstado[6]=80; 
+0442:  MOVLW  50
+0443:  MOVWF  56
+.................... } //Else 
+.................... } // If 
+0444:  GOTO   415
+.................... } // While 
+.................... Retraso = 0; 
+0445:  CLRF   60
+0446:  CLRF   5F
+....................  
+.................... while ( (input(IN8)) ^ TeclaEstado[7] ){  // Si cambia la tecla (Cuando aviso al bus de este cambio?) 
+0447:  MOVLW  00
+0448:  BTFSC  08.5
+0449:  MOVLW  01
+044A:  MOVWF  64
+044B:  MOVLW  00
+044C:  BTFSC  5C.7
+044D:  MOVLW  01
+044E:  XORWF  64,W
+044F:  BTFSC  03.2
+0450:  GOTO   477
+.................... Retraso = Retraso + 1; 
+0451:  MOVLW  01
+0452:  ADDWF  5F,F
+0453:  BTFSC  03.0
+0454:  INCF   60,F
+.................... if (Retraso == 755) { 
+0455:  MOVF   5F,W
+0456:  SUBLW  F3
+0457:  BTFSS  03.2
+0458:  GOTO   476
+0459:  MOVF   60,W
+045A:  SUBLW  02
+045B:  BTFSS  03.2
+045C:  GOTO   476
+.................... Retraso = 0; 
+045D:  CLRF   60
+045E:  CLRF   5F
+.................... TeclaEstado[7]=input(IN8); // Gurdamos el Cambio 
+045F:  BCF    5C.7
+0460:  BTFSC  08.5
+0461:  BSF    5C.7
+.................... LEDON; 
+0462:  BCF    08.7
+.................... if (LuzEstado[7] != 90) { 
+0463:  MOVF   57,W
+0464:  SUBLW  5A
+0465:  BTFSC  03.2
+0466:  GOTO   46F
+.................... BusData(LUZ7,90); 
+0467:  MOVLW  4C
+0468:  MOVWF  64
+0469:  MOVLW  5A
+046A:  MOVWF  65
+046B:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ7, 90, LUZ7 + 90); //PRENDO 
+.................... LuzEstado[7]=90; 
+046C:  MOVLW  5A
+046D:  MOVWF  57
+.................... } // si no es 90 (no esta encendida con intensidad) 
+046E:  GOTO   476
+.................... else { 
+.................... BusData(LUZ7,80); 
+046F:  MOVLW  4C
+0470:  MOVWF  64
+0471:  MOVLW  50
+0472:  MOVWF  65
+0473:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ7, 80, LUZ7 + 80); //APAGO 
+.................... LuzEstado[7]=80; 
+0474:  MOVLW  50
+0475:  MOVWF  57
+.................... } //Else 
+.................... } // If 
+0476:  GOTO   447
+.................... } // While 
+.................... Retraso = 0; 
+0477:  CLRF   60
+0478:  CLRF   5F
+....................  
+.................... while ( (input(IN9)) ^ TeclaEstado[8] ){  // Si cambia la tecla (Cuando aviso al bus de este cambio?) 
+0479:  MOVLW  00
+047A:  BTFSC  08.4
+047B:  MOVLW  01
+047C:  MOVWF  64
+047D:  MOVLW  00
+047E:  BTFSC  5D.0
+047F:  MOVLW  01
+0480:  XORWF  64,W
+0481:  BTFSC  03.2
+0482:  GOTO   4A9
+.................... Retraso = Retraso + 1; 
+0483:  MOVLW  01
+0484:  ADDWF  5F,F
+0485:  BTFSC  03.0
+0486:  INCF   60,F
+.................... if (Retraso == 755) { 
+0487:  MOVF   5F,W
+0488:  SUBLW  F3
+0489:  BTFSS  03.2
+048A:  GOTO   4A8
+048B:  MOVF   60,W
+048C:  SUBLW  02
+048D:  BTFSS  03.2
+048E:  GOTO   4A8
+.................... Retraso = 0; 
+048F:  CLRF   60
+0490:  CLRF   5F
+.................... TeclaEstado[8]=input(IN9); // Gurdamos el Cambio 
+0491:  BCF    5D.0
+0492:  BTFSC  08.4
+0493:  BSF    5D.0
+.................... LEDON; 
+0494:  BCF    08.7
+.................... if (LuzEstado[8] != 90) { 
+0495:  MOVF   58,W
+0496:  SUBLW  5A
+0497:  BTFSC  03.2
+0498:  GOTO   4A1
+.................... BusData(LUZ8,90); 
+0499:  MOVLW  4D
+049A:  MOVWF  64
+049B:  MOVLW  5A
+049C:  MOVWF  65
+049D:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ8, 90, LUZ8 + 90); //PRENDO 
+.................... LuzEstado[8]=90; 
+049E:  MOVLW  5A
+049F:  MOVWF  58
+.................... } // si no es 90 (no esta encendida con intensidad) 
+04A0:  GOTO   4A8
+.................... else { 
+.................... BusData(LUZ8,80); 
+04A1:  MOVLW  4D
+04A2:  MOVWF  64
+04A3:  MOVLW  50
+04A4:  MOVWF  65
+04A5:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ8, 80, LUZ8 + 80); //APAGO 
+.................... LuzEstado[8]=80; 
+04A6:  MOVLW  50
+04A7:  MOVWF  58
+.................... } //Else 
+.................... } // If 
+04A8:  GOTO   479
+.................... } // While 
+.................... Retraso = 0; 
+04A9:  CLRF   60
+04AA:  CLRF   5F
+....................  
+.................... while ( (input(IN10)) ^ TeclaEstado[9] ){  // Si cambia la tecla (Cuando aviso al bus de este cambio?) 
+04AB:  MOVLW  00
+04AC:  BTFSC  07.4
+04AD:  MOVLW  01
+04AE:  MOVWF  64
+04AF:  MOVLW  00
+04B0:  BTFSC  5D.1
+04B1:  MOVLW  01
+04B2:  XORWF  64,W
+04B3:  BTFSC  03.2
+04B4:  GOTO   4DB
+.................... Retraso = Retraso + 1; 
+04B5:  MOVLW  01
+04B6:  ADDWF  5F,F
+04B7:  BTFSC  03.0
+04B8:  INCF   60,F
+.................... if (Retraso == 755) { 
+04B9:  MOVF   5F,W
+04BA:  SUBLW  F3
+04BB:  BTFSS  03.2
+04BC:  GOTO   4DA
+04BD:  MOVF   60,W
+04BE:  SUBLW  02
+04BF:  BTFSS  03.2
+04C0:  GOTO   4DA
+.................... Retraso = 0; 
+04C1:  CLRF   60
+04C2:  CLRF   5F
+.................... TeclaEstado[9]=input(IN10); // Gurdamos el Cambio 
+04C3:  BCF    5D.1
+04C4:  BTFSC  07.4
+04C5:  BSF    5D.1
+.................... LEDON; 
+04C6:  BCF    08.7
+.................... if (LuzEstado[9] != 90) { 
+04C7:  MOVF   59,W
+04C8:  SUBLW  5A
+04C9:  BTFSC  03.2
+04CA:  GOTO   4D3
+.................... BusData(LUZ9,90); 
+04CB:  MOVLW  4E
+04CC:  MOVWF  64
+04CD:  MOVLW  5A
+04CE:  MOVWF  65
+04CF:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ9, 90, LUZ9 + 90); //PRENDO 
+.................... LuzEstado[9]=90; 
+04D0:  MOVLW  5A
+04D1:  MOVWF  59
+.................... } // si no es 90 (no esta encendida con intensidad) 
+04D2:  GOTO   4DA
+.................... else { 
+.................... BusData(LUZ9,80); 
+04D3:  MOVLW  4E
+04D4:  MOVWF  64
+04D5:  MOVLW  50
+04D6:  MOVWF  65
+04D7:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ9, 80, LUZ9 + 80); //APAGO 
+.................... LuzEstado[9]=80; 
+04D8:  MOVLW  50
+04D9:  MOVWF  59
+.................... } //Else 
+.................... } // If 
+04DA:  GOTO   4AB
+.................... } // While 
+.................... Retraso = 0; 
+04DB:  CLRF   60
+04DC:  CLRF   5F
+....................  
+.................... while ( (input(IN11)) ^ TeclaEstado[10] ){  // Si cambia la tecla (Cuando aviso al bus de este cambio?) 
+04DD:  MOVLW  00
+04DE:  BTFSC  08.3
+04DF:  MOVLW  01
+04E0:  MOVWF  64
+04E1:  MOVLW  00
+04E2:  BTFSC  5D.2
+04E3:  MOVLW  01
+04E4:  XORWF  64,W
+04E5:  BTFSC  03.2
+04E6:  GOTO   50D
+.................... Retraso = Retraso + 1; 
+04E7:  MOVLW  01
+04E8:  ADDWF  5F,F
+04E9:  BTFSC  03.0
+04EA:  INCF   60,F
+.................... if (Retraso == 755) { 
+04EB:  MOVF   5F,W
+04EC:  SUBLW  F3
+04ED:  BTFSS  03.2
+04EE:  GOTO   50C
+04EF:  MOVF   60,W
+04F0:  SUBLW  02
+04F1:  BTFSS  03.2
+04F2:  GOTO   50C
+.................... Retraso = 0; 
+04F3:  CLRF   60
+04F4:  CLRF   5F
+.................... TeclaEstado[10]=input(IN11); // Gurdamos el Cambio 
+04F5:  BCF    5D.2
+04F6:  BTFSC  08.3
+04F7:  BSF    5D.2
+.................... LEDON; 
+04F8:  BCF    08.7
+.................... if (LuzEstado[10] != 90) { 
+04F9:  MOVF   5A,W
+04FA:  SUBLW  5A
+04FB:  BTFSC  03.2
+04FC:  GOTO   505
+.................... BusData(LUZ10,90); 
+04FD:  MOVLW  4F
+04FE:  MOVWF  64
+04FF:  MOVLW  5A
+0500:  MOVWF  65
+0501:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ10, 90, LUZ10 + 90); //PRENDO 
+.................... LuzEstado[10]=90; 
+0502:  MOVLW  5A
+0503:  MOVWF  5A
+.................... } // si no es 90 (no esta encendida con intensidad) 
+0504:  GOTO   50C
+.................... else { 
+.................... BusData(LUZ10,80); 
+0505:  MOVLW  4F
+0506:  MOVWF  64
+0507:  MOVLW  50
+0508:  MOVWF  65
+0509:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ10, 80, LUZ10 + 80); //APAGO 
+.................... LuzEstado[10]=80; 
+050A:  MOVLW  50
+050B:  MOVWF  5A
+.................... } //Else 
+.................... } // If 
+050C:  GOTO   4DD
+.................... } // While 
+.................... Retraso = 0; 
+050D:  CLRF   60
+050E:  CLRF   5F
+....................  
+.................... while ( (input(IN12)) ^ TeclaEstado[11] ){  // Si cambia la tecla (Cuando aviso al bus de este cambio?) 
+050F:  MOVLW  00
+0510:  BTFSC  08.2
+0511:  MOVLW  01
+0512:  MOVWF  64
+0513:  MOVLW  00
+0514:  BTFSC  5D.3
+0515:  MOVLW  01
+0516:  XORWF  64,W
+0517:  BTFSC  03.2
+0518:  GOTO   53E
+.................... Retraso = Retraso + 1; 
+0519:  MOVLW  01
+051A:  ADDWF  5F,F
+051B:  BTFSC  03.0
+051C:  INCF   60,F
+.................... if (Retraso == 755) { 
+051D:  MOVF   5F,W
+051E:  SUBLW  F3
+051F:  BTFSS  03.2
+0520:  GOTO   53D
+0521:  MOVF   60,W
+0522:  SUBLW  02
+0523:  BTFSS  03.2
+0524:  GOTO   53D
+.................... Retraso = 0; 
+0525:  CLRF   60
+0526:  CLRF   5F
+.................... TeclaEstado[11]=input(IN12); // Gurdamos el Cambio 
+0527:  BCF    5D.3
+0528:  BTFSC  08.2
+0529:  BSF    5D.3
+.................... LEDON; 
+052A:  BCF    08.7
+.................... if (LuzEstado[11] != 90) { 
+052B:  MOVF   5B,W
+052C:  SUBLW  5A
+052D:  BTFSC  03.2
+052E:  GOTO   537
+.................... BusData(LUZ11,90); 
+052F:  MOVLW  50
+0530:  MOVWF  64
+0531:  MOVLW  5A
+0532:  MOVWF  65
+0533:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ11, 90, LUZ11 + 90); //PRENDO 
+.................... LuzEstado[11]=90; 
+0534:  MOVLW  5A
+0535:  MOVWF  5B
+.................... } // si no es 90 (no esta encendida con intensidad) 
+0536:  GOTO   53D
+.................... else { 
+.................... BusData(LUZ11,80); 
+0537:  MOVLW  50
+0538:  MOVWF  64
+0539:  MOVWF  65
+053A:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, LUZ11, 80, LUZ11 + 80); //APAGO 
+.................... LuzEstado[11]=80; 
+053B:  MOVLW  50
+053C:  MOVWF  5B
+.................... } //Else 
+.................... } // If 
+053D:  GOTO   50F
+.................... } // While 
+.................... Retraso = 0; 
+053E:  CLRF   60
+053F:  CLRF   5F
+0540:  BCF    0A.3
+0541:  BCF    0A.4
+0542:  GOTO   6DC (RETURN)
+....................  
+.................... } //fn 
+....................  
+....................  
+.................... void Cambio(){ 
+.................... int Cuenta; 
+.................... for (Cuenta=0;Cuenta<12;Cuenta++){ // llena todo desde el 0 al 11 
+0543:  CLRF   63
+0544:  MOVF   63,W
+0545:  SUBLW  0B
+0546:  BTFSS  03.0
+0547:  GOTO   6BE
+....................       if (LuzEstado[Cuenta] == 80) { 
+0548:  MOVLW  50
+0549:  ADDWF  63,W
+054A:  MOVWF  04
+054B:  BCF    03.7
+054C:  MOVF   00,W
+054D:  SUBLW  50
+054E:  BTFSS  03.2
+054F:  GOTO   55C
+....................          LuzAccion[Cuenta] = 95; // Apagado 
+0550:  MOVLW  38
+0551:  ADDWF  63,W
+0552:  MOVWF  04
+0553:  BCF    03.7
+0554:  MOVLW  5F
+0555:  MOVWF  00
+....................          LuzAccion2[Cuenta] = 95 + 39; // Apagado 
+0556:  MOVLW  44
+0557:  ADDWF  63,W
+0558:  MOVWF  04
+0559:  BCF    03.7
+055A:  MOVLW  86
+055B:  MOVWF  00
+....................       } // If estado 80 
+....................  /*      
+....................       if (LuzEstado[Cuenta] == 90) { 
+....................          if (LuzIntensidad[Cuenta] == 0) { 
+....................          LuzEstado[Cuenta] = 102; // Maximo 
+....................          } else { 
+....................          LuzAccion[Cuenta] = LuzIntensidad[Cuenta]; // Segun intensidad 
+....................          } 
+....................       } // If estado 90       
+....................        
+.................... */       
+....................       if (LuzEstado[Cuenta] == 90) { 
+055C:  MOVLW  50
+055D:  ADDWF  63,W
+055E:  MOVWF  04
+055F:  BCF    03.7
+0560:  MOVF   00,W
+0561:  SUBLW  5A
+0562:  BTFSS  03.2
+0563:  GOTO   58B
+....................          LuzAccion[Cuenta] = LuzIntensidad[Cuenta]; // Segun intensidad 
+0564:  MOVLW  38
+0565:  ADDWF  63,W
+0566:  MOVWF  78
+0567:  CLRF   7A
+0568:  BTFSC  03.0
+0569:  INCF   7A,F
+056A:  MOVLW  2C
+056B:  ADDWF  63,W
+056C:  MOVWF  04
+056D:  BCF    03.7
+056E:  MOVF   00,W
+056F:  MOVWF  66
+0570:  MOVF   78,W
+0571:  MOVWF  04
+0572:  BCF    03.7
+0573:  BTFSC  7A.0
+0574:  BSF    03.7
+0575:  MOVF   66,W
+0576:  MOVWF  00
+....................          LuzAccion2[Cuenta] = LuzIntensidad[Cuenta] + 39; // Segun intensidad 
+0577:  MOVLW  44
+0578:  ADDWF  63,W
+0579:  MOVWF  78
+057A:  CLRF   7A
+057B:  BTFSC  03.0
+057C:  INCF   7A,F
+057D:  MOVLW  2C
+057E:  ADDWF  63,W
+057F:  MOVWF  04
+0580:  BCF    03.7
+0581:  MOVLW  27
+0582:  ADDWF  00,W
+0583:  MOVWF  66
+0584:  MOVF   78,W
+0585:  MOVWF  04
+0586:  BCF    03.7
+0587:  BTFSC  7A.0
+0588:  BSF    03.7
+0589:  MOVF   66,W
+058A:  MOVWF  00
+....................       } // If estado 90 
+....................  
+....................       if (LuzEstado[Cuenta] == 102) { 
+058B:  MOVLW  50
+058C:  ADDWF  63,W
+058D:  MOVWF  04
+058E:  BCF    03.7
+058F:  MOVF   00,W
+0590:  SUBLW  66
+0591:  BTFSS  03.2
+0592:  GOTO   59E
+....................       LuzAccion[Cuenta] = 0; // MAXIMO 
+0593:  MOVLW  38
+0594:  ADDWF  63,W
+0595:  MOVWF  04
+0596:  BCF    03.7
+0597:  CLRF   00
+....................       LuzAccion2[Cuenta] = 39; // MAXIMO 
+0598:  MOVLW  44
+0599:  ADDWF  63,W
+059A:  MOVWF  04
+059B:  BCF    03.7
+059C:  MOVLW  27
+059D:  MOVWF  00
+....................       } 
+....................       if (LuzEstado[Cuenta] == 95) { 
+059E:  MOVLW  50
+059F:  ADDWF  63,W
+05A0:  MOVWF  04
+05A1:  BCF    03.7
+05A2:  MOVF   00,W
+05A3:  SUBLW  5F
+05A4:  BTFSS  03.2
+05A5:  GOTO   5B2
+....................       LuzAccion[Cuenta] = 17; // MEDIO 
+05A6:  MOVLW  38
+05A7:  ADDWF  63,W
+05A8:  MOVWF  04
+05A9:  BCF    03.7
+05AA:  MOVLW  11
+05AB:  MOVWF  00
+....................       LuzAccion2[Cuenta] = 17 + 39; // MEDIO 
+05AC:  MOVLW  44
+05AD:  ADDWF  63,W
+05AE:  MOVWF  04
+05AF:  BCF    03.7
+05B0:  MOVLW  38
+05B1:  MOVWF  00
+....................       } 
+....................       if (LuzEstado[Cuenta] == 96) { 
+05B2:  MOVLW  50
+05B3:  ADDWF  63,W
+05B4:  MOVWF  04
+05B5:  BCF    03.7
+05B6:  MOVF   00,W
+05B7:  SUBLW  60
+05B8:  BTFSS  03.2
+05B9:  GOTO   5C6
+....................       LuzAccion[Cuenta] = 23; //MINIMO 
+05BA:  MOVLW  38
+05BB:  ADDWF  63,W
+05BC:  MOVWF  04
+05BD:  BCF    03.7
+05BE:  MOVLW  17
+05BF:  MOVWF  00
+....................       LuzAccion2[Cuenta] = 23 + 39; //MINIMO 
+05C0:  MOVLW  44
+05C1:  ADDWF  63,W
+05C2:  MOVWF  04
+05C3:  BCF    03.7
+05C4:  MOVLW  3E
+05C5:  MOVWF  00
+....................       } 
+....................       if ((LuzEstado[Cuenta] == 120) || (LuzEstado[Cuenta] == 70)){ // ONOFF1 mas lento de todos 
+05C6:  MOVLW  50
+05C7:  ADDWF  63,W
+05C8:  MOVWF  04
+05C9:  BCF    03.7
+05CA:  MOVF   00,W
+05CB:  SUBLW  78
+05CC:  BTFSC  03.2
+05CD:  GOTO   5D6
+05CE:  MOVLW  50
+05CF:  ADDWF  63,W
+05D0:  MOVWF  04
+05D1:  BCF    03.7
+05D2:  MOVF   00,W
+05D3:  SUBLW  46
+05D4:  BTFSS  03.2
+05D5:  GOTO   5FC
+....................          if (bit_test(j,7)) { // Encendido 
+05D6:  BTFSS  62.7
+05D7:  GOTO   5EA
+....................          LuzEstado[Cuenta] = 120; 
+05D8:  MOVLW  50
+05D9:  ADDWF  63,W
+05DA:  MOVWF  04
+05DB:  BCF    03.7
+05DC:  MOVLW  78
+05DD:  MOVWF  00
+....................          LuzAccion[Cuenta] = 0; 
+05DE:  MOVLW  38
+05DF:  ADDWF  63,W
+05E0:  MOVWF  04
+05E1:  BCF    03.7
+05E2:  CLRF   00
+....................          LuzAccion2[Cuenta] = 39; 
+05E3:  MOVLW  44
+05E4:  ADDWF  63,W
+05E5:  MOVWF  04
+05E6:  BCF    03.7
+05E7:  MOVLW  27
+05E8:  MOVWF  00
+....................          } 
+05E9:  GOTO   5FC
+....................          else { 
+....................          LuzEstado[Cuenta] = 70; 
+05EA:  MOVLW  50
+05EB:  ADDWF  63,W
+05EC:  MOVWF  04
+05ED:  BCF    03.7
+05EE:  MOVLW  46
+05EF:  MOVWF  00
+....................          LuzAccion[Cuenta] = 95; 
+05F0:  MOVLW  38
+05F1:  ADDWF  63,W
+05F2:  MOVWF  04
+05F3:  BCF    03.7
+05F4:  MOVLW  5F
+05F5:  MOVWF  00
+....................          LuzAccion2[Cuenta] = 95 + 39; 
+05F6:  MOVLW  44
+05F7:  ADDWF  63,W
+05F8:  MOVWF  04
+05F9:  BCF    03.7
+05FA:  MOVLW  86
+05FB:  MOVWF  00
+....................          } 
+....................       } // If ONOFF 1 
+....................        
+....................       if ((LuzEstado[Cuenta] == 121) || (LuzEstado[Cuenta] == 71)){ // ONOFF2 mediano 
+05FC:  MOVLW  50
+05FD:  ADDWF  63,W
+05FE:  MOVWF  04
+05FF:  BCF    03.7
+0600:  MOVF   00,W
+0601:  SUBLW  79
+0602:  BTFSC  03.2
+0603:  GOTO   60C
+0604:  MOVLW  50
+0605:  ADDWF  63,W
+0606:  MOVWF  04
+0607:  BCF    03.7
+0608:  MOVF   00,W
+0609:  SUBLW  47
+060A:  BTFSS  03.2
+060B:  GOTO   632
+....................          if (bit_test(j,6)) { // Encendido 
+060C:  BTFSS  62.6
+060D:  GOTO   620
+....................          LuzEstado[Cuenta] = 121; 
+060E:  MOVLW  50
+060F:  ADDWF  63,W
+0610:  MOVWF  04
+0611:  BCF    03.7
+0612:  MOVLW  79
+0613:  MOVWF  00
+....................          LuzAccion[Cuenta] = 0; 
+0614:  MOVLW  38
+0615:  ADDWF  63,W
+0616:  MOVWF  04
+0617:  BCF    03.7
+0618:  CLRF   00
+....................          LuzAccion2[Cuenta] = 39; 
+0619:  MOVLW  44
+061A:  ADDWF  63,W
+061B:  MOVWF  04
+061C:  BCF    03.7
+061D:  MOVLW  27
+061E:  MOVWF  00
+....................          } 
+061F:  GOTO   632
+....................          else { 
+....................          LuzEstado[Cuenta] = 71; 
+0620:  MOVLW  50
+0621:  ADDWF  63,W
+0622:  MOVWF  04
+0623:  BCF    03.7
+0624:  MOVLW  47
+0625:  MOVWF  00
+....................          LuzAccion[Cuenta] = 95; 
+0626:  MOVLW  38
+0627:  ADDWF  63,W
+0628:  MOVWF  04
+0629:  BCF    03.7
+062A:  MOVLW  5F
+062B:  MOVWF  00
+....................          LuzAccion2[Cuenta] = 95 + 39; 
+062C:  MOVLW  44
+062D:  ADDWF  63,W
+062E:  MOVWF  04
+062F:  BCF    03.7
+0630:  MOVLW  86
+0631:  MOVWF  00
+....................          } 
+....................          } // If ONOFF 2 
+....................        
+....................       if ((LuzEstado[Cuenta] == 122) || (LuzEstado[Cuenta] == 72)){ // ONOFF3 rapido 
+0632:  MOVLW  50
+0633:  ADDWF  63,W
+0634:  MOVWF  04
+0635:  BCF    03.7
+0636:  MOVF   00,W
+0637:  SUBLW  7A
+0638:  BTFSC  03.2
+0639:  GOTO   642
+063A:  MOVLW  50
+063B:  ADDWF  63,W
+063C:  MOVWF  04
+063D:  BCF    03.7
+063E:  MOVF   00,W
+063F:  SUBLW  48
+0640:  BTFSS  03.2
+0641:  GOTO   668
+....................          if (bit_test(j,5)) { // Encendido 
+0642:  BTFSS  62.5
+0643:  GOTO   656
+....................          LuzEstado[Cuenta] = 122; 
+0644:  MOVLW  50
+0645:  ADDWF  63,W
+0646:  MOVWF  04
+0647:  BCF    03.7
+0648:  MOVLW  7A
+0649:  MOVWF  00
+....................          LuzAccion[Cuenta] = 0; 
+064A:  MOVLW  38
+064B:  ADDWF  63,W
+064C:  MOVWF  04
+064D:  BCF    03.7
+064E:  CLRF   00
+....................          LuzAccion2[Cuenta] = 39; 
+064F:  MOVLW  44
+0650:  ADDWF  63,W
+0651:  MOVWF  04
+0652:  BCF    03.7
+0653:  MOVLW  27
+0654:  MOVWF  00
+....................          } 
+0655:  GOTO   668
+....................          else { 
+....................          LuzEstado[Cuenta] = 72; 
+0656:  MOVLW  50
+0657:  ADDWF  63,W
+0658:  MOVWF  04
+0659:  BCF    03.7
+065A:  MOVLW  48
+065B:  MOVWF  00
+....................          LuzAccion[Cuenta] = 95; 
+065C:  MOVLW  38
+065D:  ADDWF  63,W
+065E:  MOVWF  04
+065F:  BCF    03.7
+0660:  MOVLW  5F
+0661:  MOVWF  00
+....................          LuzAccion2[Cuenta] = 95 + 39; 
+0662:  MOVLW  44
+0663:  ADDWF  63,W
+0664:  MOVWF  04
+0665:  BCF    03.7
+0666:  MOVLW  86
+0667:  MOVWF  00
+....................          } 
+....................           
+....................       } // If ONOFF 1 
+....................       if ((LuzEstado[Cuenta] == 123) || (LuzEstado[Cuenta] == 73)){ // ONOFF4 rapidisimo 
+0668:  MOVLW  50
+0669:  ADDWF  63,W
+066A:  MOVWF  04
+066B:  BCF    03.7
+066C:  MOVF   00,W
+066D:  SUBLW  7B
+066E:  BTFSC  03.2
+066F:  GOTO   678
+0670:  MOVLW  50
+0671:  ADDWF  63,W
+0672:  MOVWF  04
+0673:  BCF    03.7
+0674:  MOVF   00,W
+0675:  SUBLW  49
+0676:  BTFSS  03.2
+0677:  GOTO   69E
+....................          if (bit_test(j,4)) { // Encendido 
+0678:  BTFSS  62.4
+0679:  GOTO   68C
+....................          LuzEstado[Cuenta] = 123; 
+067A:  MOVLW  50
+067B:  ADDWF  63,W
+067C:  MOVWF  04
+067D:  BCF    03.7
+067E:  MOVLW  7B
+067F:  MOVWF  00
+....................          LuzAccion[Cuenta] = 0; 
+0680:  MOVLW  38
+0681:  ADDWF  63,W
+0682:  MOVWF  04
+0683:  BCF    03.7
+0684:  CLRF   00
+....................          LuzAccion2[Cuenta] = 39; 
+0685:  MOVLW  44
+0686:  ADDWF  63,W
+0687:  MOVWF  04
+0688:  BCF    03.7
+0689:  MOVLW  27
+068A:  MOVWF  00
+....................          } 
+068B:  GOTO   69E
+....................          else { 
+....................          LuzEstado[Cuenta] = 73; 
+068C:  MOVLW  50
+068D:  ADDWF  63,W
+068E:  MOVWF  04
+068F:  BCF    03.7
+0690:  MOVLW  49
+0691:  MOVWF  00
+....................          LuzAccion[Cuenta] = 95; 
+0692:  MOVLW  38
+0693:  ADDWF  63,W
+0694:  MOVWF  04
+0695:  BCF    03.7
+0696:  MOVLW  5F
+0697:  MOVWF  00
+....................          LuzAccion2[Cuenta] = 95 + 39; 
+0698:  MOVLW  44
+0699:  ADDWF  63,W
+069A:  MOVWF  04
+069B:  BCF    03.7
+069C:  MOVLW  86
+069D:  MOVWF  00
+....................          } 
+....................       } // If ONOFF 1 
+....................        
+.................... /*  OLAS PENDIENTES DE IMPLEMENTAR 
+....................  
+....................       if (LuzEstado[Cuenta] == 130) ii =// OLA 1 Lentisima 
+....................          if (bit_test(j,7)) ii = 0; 
+....................          else ii = 10000 
+....................  
+....................        
+....................       if (LuzEstado[Cuenta] == 131){ // OLA 2 normal 
+....................          if (bit_test(j,7)) ii = 0; 
+....................          else ii = 10000 
+....................       } // If ONOFF 1 
+....................        
+....................       if (LuzEstado[Cuenta] == 132){ // OLA 3 rapida 
+....................          if (bit_test(j,7)) ii = 0; 
+....................          else ii = 10000 
+....................       } // If ONOFF 1 
+.................... */ 
+....................  
+....................       if (LuzEstado[Cuenta] == 140){ // ALARMA ON 
+069E:  MOVLW  50
+069F:  ADDWF  63,W
+06A0:  MOVWF  04
+06A1:  BCF    03.7
+06A2:  MOVF   00,W
+06A3:  SUBLW  8C
+06A4:  BTFSS  03.2
+06A5:  GOTO   6AD
+....................          Teclas = false; 
+06A6:  BCF    5E.0
+....................          LuzEstado[Cuenta] = 122; 
+06A7:  MOVLW  50
+06A8:  ADDWF  63,W
+06A9:  MOVWF  04
+06AA:  BCF    03.7
+06AB:  MOVLW  7A
+06AC:  MOVWF  00
+....................       } // If ONOFF 3 --> Alarma 
+....................  
+....................       if (LuzEstado[Cuenta] == 141){ // ALARMA OFF 
+06AD:  MOVLW  50
+06AE:  ADDWF  63,W
+06AF:  MOVWF  04
+06B0:  BCF    03.7
+06B1:  MOVF   00,W
+06B2:  SUBLW  8D
+06B3:  BTFSS  03.2
+06B4:  GOTO   6BC
+....................          Teclas = true; 
+06B5:  BSF    5E.0
+....................          LuzEstado[Cuenta] = 80; 
+06B6:  MOVLW  50
+06B7:  ADDWF  63,W
+06B8:  MOVWF  04
+06B9:  BCF    03.7
+06BA:  MOVLW  50
+06BB:  MOVWF  00
+....................       } // If ONOFF 3 --> Alarma 
+06BC:  INCF   63,F
+06BD:  GOTO   544
+.................... } // FOR 
+06BE:  BCF    0A.3
+06BF:  BCF    0A.4
+06C0:  GOTO   6DD (RETURN)
+.................... } // fn 
+....................   
+.................... void HolaMundo(){ // Inicio & configuracion de variables 
+....................  
+.................... /////////  Inicio el WatchDog  /////////////// 
+.................... setup_wdt(WDT_2304MS); 
+*
+01FC:  MOVLW  0F
+01FD:  MOVWF  77
+01FE:  CLRF   01
+01FF:  MOVLW  81
+0200:  MOVWF  04
+0201:  BCF    03.7
+0202:  MOVF   00,W
+0203:  ANDLW  F0
+0204:  IORLW  07
+0205:  MOVWF  00
+0206:  CLRWDT
+0207:  MOVF   00,W
+0208:  ANDLW  F7
+0209:  BTFSC  77.3
+020A:  ANDLW  F0
+020B:  IORWF  77,W
+020C:  MOVWF  00
+....................  
+.................... /////////  Puertos  /////////////// 
+.................... set_tris_a(0b00001011);  // Puerto A como salidas, menos A0, A1 y A3 que son entradas analogicas. 
+020D:  MOVLW  0B
+020E:  BSF    03.5
+020F:  MOVWF  05
+.................... set_tris_b(0b00000001);  // Puerto B, todas salidas, menos B0 que es el cruce por cero 
+0210:  MOVLW  01
+0211:  MOVWF  06
+.................... set_tris_c(0b10011111);  // Puerto C, de 0 a 4 -> entradas; 5 y 6 para RS232 salidas; C7 es RX -> Entrada 
+0212:  MOVLW  9F
+0213:  MOVWF  07
+.................... set_tris_d(0b01111111);  // Puerto D, todas entradas menos el Piloto (D7) 
+0214:  MOVLW  7F
+0215:  MOVWF  08
+....................  
+.................... int Cuenta = 0; 
+0216:  BCF    03.5
+0217:  CLRF   63
+.................... for (Cuenta=0;Cuenta<12;Cuenta++){ // llena todo desde el 0 al 11 
+0218:  CLRF   63
+0219:  MOVF   63,W
+021A:  SUBLW  0B
+021B:  BTFSS  03.0
+021C:  GOTO   22A
+.................... Luzintensidad[Cuenta] = 0; 
+021D:  MOVLW  2C
+021E:  ADDWF  63,W
+021F:  MOVWF  04
+0220:  BCF    03.7
+0221:  CLRF   00
+.................... LuzEstado[Cuenta] = 80;  // Por defecto todas las luces apagadas 
+0222:  MOVLW  50
+0223:  ADDWF  63,W
+0224:  MOVWF  04
+0225:  BCF    03.7
+0226:  MOVLW  50
+0227:  MOVWF  00
+0228:  INCF   63,F
+0229:  GOTO   219
+.................... } 
+....................  
+.................... restart_wdt(); // Reiniciamos el perro 
+022A:  CLRWDT
+.................... delay_ms(1000); 
+022B:  MOVLW  04
+022C:  MOVWF  64
+022D:  MOVLW  FA
+022E:  MOVWF  65
+022F:  CALL   1B8
+0230:  DECFSZ 64,F
+0231:  GOTO   22D
+.................... restart_wdt(); // Reiniciamos el perro 
+0232:  CLRWDT
+....................  
+.................... /////////  Conversor AD  /////////////// 
+.................... setup_adc_ports(RA0_RA1_Ra3_ANALOG);  // Entradas analogicas. 
+0233:  BSF    03.5
+0234:  BCF    1F.0
+0235:  BCF    1F.1
+0236:  BSF    1F.2
+0237:  BCF    1F.3
+.................... setup_adc(ADC_CLOCK_INTERNAL);  // Barrido ¿Hace falta? 
+0238:  BCF    1F.6
+0239:  BCF    03.5
+023A:  BSF    1F.6
+023B:  BSF    1F.7
+023C:  BSF    03.5
+023D:  BCF    1F.7
+023E:  BCF    03.5
+023F:  BSF    1F.0
+....................  
+.................... /////////  Temporizadores  /////////////// 
+.................... setup_timer_1(T1_INTERNAL | T1_DIV_BY_1); // Contador del tiempo de cruce por cero 
+0240:  MOVLW  85
+0241:  MOVWF  10
+.................... setup_timer_2(T2_DIV_BY_1, 200, 1); // Contador de entrada a la funcion Accion(); 185 
+0242:  MOVLW  00
+0243:  MOVWF  78
+0244:  IORLW  04
+0245:  MOVWF  12
+0246:  MOVLW  C8
+0247:  BSF    03.5
+0248:  MOVWF  12
+....................  
+.................... /////////  Inicio de valores particulares por si el servidor no contesta  /////////////// 
+....................  
+.................... Cuenta = 0; 
+0249:  BCF    03.5
+024A:  CLRF   63
+.................... for (Cuenta=0;Cuenta<12;Cuenta++){ // llena todo desde el 0 al 11 
+024B:  CLRF   63
+024C:  MOVF   63,W
+024D:  SUBLW  0B
+024E:  BTFSS  03.0
+024F:  GOTO   25D
+.................... Luzintensidad[Cuenta] = 0; 
+0250:  MOVLW  2C
+0251:  ADDWF  63,W
+0252:  MOVWF  04
+0253:  BCF    03.7
+0254:  CLRF   00
+.................... LuzEstado[Cuenta] = 80;  // Por defecto todas las luces apagadas 
+0255:  MOVLW  50
+0256:  ADDWF  63,W
+0257:  MOVWF  04
+0258:  BCF    03.7
+0259:  MOVLW  50
+025A:  MOVWF  00
+025B:  INCF   63,F
+025C:  GOTO   24C
+.................... } 
+.................... /* 
+.................... LuzEstado[0] = 80; 
+.................... LuzEstado[1] = 80; 
+.................... LuzEstado[2] = 80; 
+.................... LuzEstado[3] = 80; 
+.................... LuzEstado[4] = 80; 
+.................... LuzEstado[5] = 80; 
+.................... LuzEstado[6] = 80; 
+.................... LuzEstado[7] = 80; 
+.................... LuzEstado[8] = 80; 
+.................... LuzEstado[9] = 80; 
+.................... LuzEstado[10] = 80; 
+.................... LuzEstado[11] = 80; 
+.................... */ 
+.................... //////////////////////// INDICADOR DE ARRANQUE /////////////////////////// 
+.................... LEDON; 
+025D:  BCF    08.7
+.................... delay_ms(RESTA); 
+025E:  MOVLW  45
+025F:  MOVWF  65
+0260:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+0261:  CLRWDT
+.................... LEDOFF; 
+0262:  BSF    08.7
+.................... delay_ms(RESTA); 
+0263:  MOVLW  45
+0264:  MOVWF  65
+0265:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+0266:  CLRWDT
+.................... LEDON; 
+0267:  BCF    08.7
+.................... delay_ms(RESTA); 
+0268:  MOVLW  45
+0269:  MOVWF  65
+026A:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+026B:  CLRWDT
+.................... LEDOFF; 
+026C:  BSF    08.7
+.................... delay_ms(RESTA); 
+026D:  MOVLW  45
+026E:  MOVWF  65
+026F:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+0270:  CLRWDT
+.................... LEDON; 
+0271:  BCF    08.7
+.................... delay_ms(RESTA); 
+0272:  MOVLW  45
+0273:  MOVWF  65
+0274:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+0275:  CLRWDT
+.................... LEDOFF; 
+0276:  BSF    08.7
+.................... delay_ms(RESTA); 
+0277:  MOVLW  45
+0278:  MOVWF  65
+0279:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+027A:  CLRWDT
+.................... LEDON; 
+027B:  BCF    08.7
+.................... delay_ms(RESTA); 
+027C:  MOVLW  45
+027D:  MOVWF  65
+027E:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+027F:  CLRWDT
+.................... LEDOFF; 
+0280:  BSF    08.7
+.................... delay_ms(RESTA); 
+0281:  MOVLW  45
+0282:  MOVWF  65
+0283:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+0284:  CLRWDT
+.................... LEDON; 
+0285:  BCF    08.7
+.................... delay_ms(RESTA); 
+0286:  MOVLW  45
+0287:  MOVWF  65
+0288:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+0289:  CLRWDT
+.................... LEDOFF; 
+028A:  BSF    08.7
+.................... delay_ms(RESTA); 
+028B:  MOVLW  45
+028C:  MOVWF  65
+028D:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+028E:  CLRWDT
+.................... LEDON; 
+028F:  BCF    08.7
+.................... delay_ms(RESTA); 
+0290:  MOVLW  45
+0291:  MOVWF  65
+0292:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+0293:  CLRWDT
+.................... LEDOFF; 
+0294:  BSF    08.7
+.................... delay_ms(RESTA); 
+0295:  MOVLW  45
+0296:  MOVWF  65
+0297:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+0298:  CLRWDT
+.................... LEDON; 
+0299:  BCF    08.7
+.................... delay_ms(RESTA); 
+029A:  MOVLW  45
+029B:  MOVWF  65
+029C:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+029D:  CLRWDT
+.................... LEDOFF; 
+029E:  BSF    08.7
+.................... delay_ms(RESTA); 
+029F:  MOVLW  45
+02A0:  MOVWF  65
+02A1:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+02A2:  CLRWDT
+.................... LEDON; 
+02A3:  BCF    08.7
+.................... delay_ms(RESTA); 
+02A4:  MOVLW  45
+02A5:  MOVWF  65
+02A6:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+02A7:  CLRWDT
+.................... LEDOFF; 
+02A8:  BSF    08.7
+.................... delay_ms(RESTA); 
+02A9:  MOVLW  45
+02AA:  MOVWF  65
+02AB:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+02AC:  CLRWDT
+.................... LEDON; 
+02AD:  BCF    08.7
+.................... delay_ms(RESTA); 
+02AE:  MOVLW  45
+02AF:  MOVWF  65
+02B0:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+02B1:  CLRWDT
+.................... LEDOFF; 
+02B2:  BSF    08.7
+.................... delay_ms(RESTA); 
+02B3:  MOVLW  45
+02B4:  MOVWF  65
+02B5:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+02B6:  CLRWDT
+.................... LEDON; 
+02B7:  BCF    08.7
+.................... delay_ms(RESTA); 
+02B8:  MOVLW  45
+02B9:  MOVWF  65
+02BA:  CALL   1B8
+.................... restart_wdt(); // Reiniciamos el perro 
+02BB:  CLRWDT
+.................... LEDOFF; 
+02BC:  BSF    08.7
+....................  
+.................... Cuenta = 0; 
+02BD:  CLRF   63
+.................... for (Cuenta=0;Cuenta<12;Cuenta++){ // llena todo desde el 0 al 11 
+02BE:  CLRF   63
+02BF:  MOVF   63,W
+02C0:  SUBLW  0B
+02C1:  BTFSS  03.0
+02C2:  GOTO   2D0
+.................... Luzintensidad[Cuenta] = 0; 
+02C3:  MOVLW  2C
+02C4:  ADDWF  63,W
+02C5:  MOVWF  04
+02C6:  BCF    03.7
+02C7:  CLRF   00
+.................... LuzEstado[Cuenta] = 80;  // Por defecto todas las luces apagadas 
+02C8:  MOVLW  50
+02C9:  ADDWF  63,W
+02CA:  MOVWF  04
+02CB:  BCF    03.7
+02CC:  MOVLW  50
+02CD:  MOVWF  00
+02CE:  INCF   63,F
+02CF:  GOTO   2BF
+.................... } 
+....................  
+.................... /////////  Interrupciones  /////////////// 
+.................... enable_interrupts(global); 
+02D0:  MOVLW  C0
+02D1:  IORWF  0B,F
+.................... //disable_interrupts(global); 
+.................... enable_interrupts(int_ext); // Interrupcion para el cruce por 0 
+02D2:  BSF    0B.4
+.................... enable_interrupts(int_rda); // Interrupcion de llegada de datos 
+02D3:  BSF    03.5
+02D4:  BSF    0C.5
+.................... enable_interrupts(int_timer2); // frecuencia de entrada al barrido de focos 
+02D5:  BSF    0C.1
+....................  
+.................... Teclas = true; // Para que se puedan usar las teclas 
+02D6:  BCF    03.5
+02D7:  BSF    5E.0
+....................  
+.................... /////////  Inicio valores de luces por defecto por si el servidor no contesta  /////////////// 
+....................  
+.................... Cuenta = 0; 
+02D8:  CLRF   63
+.................... for (Cuenta=0;Cuenta<12;Cuenta++){ // llena todo desde el 0 al 11 
+02D9:  CLRF   63
+02DA:  MOVF   63,W
+02DB:  SUBLW  0B
+02DC:  BTFSS  03.0
+02DD:  GOTO   2EB
+.................... Luzintensidad[Cuenta] = 0; 
+02DE:  MOVLW  2C
+02DF:  ADDWF  63,W
+02E0:  MOVWF  04
+02E1:  BCF    03.7
+02E2:  CLRF   00
+.................... LuzEstado[Cuenta] = 80;  // Por defecto todas las luces apagadas 
+02E3:  MOVLW  50
+02E4:  ADDWF  63,W
+02E5:  MOVWF  04
+02E6:  BCF    03.7
+02E7:  MOVLW  50
+02E8:  MOVWF  00
+02E9:  INCF   63,F
+02EA:  GOTO   2DA
+.................... } 
+.................... LEDON; 
+02EB:  BCF    08.7
+.................... BusData(184,52); 
+02EC:  MOVLW  B8
+02ED:  MOVWF  64
+02EE:  MOVLW  34
+02EF:  MOVWF  65
+02F0:  CALL   1DA
+.................... //printf("%c%c%c%c", 250, 184, 52, 184+52); //Identificacion de inicio (49 es 1; 50 es 2; 51 es 3; 52 es 4 y 53 es 5) // Identificacion de red 
+.................... //delay_ms(50); 
+.................... //restart_wdt(); // Reiniciamos el perro 
+.................... //BusData(184,52); 
+.................... //printf("%c%c%c%c", 250, 184, 52, 184+52); //Identificacion de inicio (49 es 1; 50 es 2; 51 es 3; 52 es 4 y 53 es 5) // Identificacion de red 
+.................... //delay_ms(50); 
+.................... restart_wdt(); // Reiniciamos el perro 
+02F1:  CLRWDT
+02F2:  BCF    0A.3
+02F3:  BCF    0A.4
+02F4:  GOTO   6DA (RETURN)
+.................... //BusData(184,52); 
+.................... //printf("%c%c%c%c", 250, 184, 52, 184+52); //Identificacion de inicio (49 es 1; 50 es 2; 51 es 3; 52 es 4 y 53 es 5) // Identificacion de red 
+.................... //delay_ms(50); 
+.................... //restart_wdt(); // Reiniciamos el perro 
+.................... } 
+....................  
+.................... #int_ext 
+.................... void Cruce(){ 
+.................... set_timer1(0); // Reseteamos el timer porque cruzamos por 0 
+*
+0041:  CLRF   0E
+0042:  CLRF   0F
+0043:  CLRF   0E
+.................... ++j; // variable de tiempos largos 
+0044:  INCF   62,F
+.................... } 
+....................  
+0045:  BCF    0B.1
+0046:  BCF    0A.3
+0047:  BCF    0A.4
+0048:  GOTO   027
+.................... #int_rda 
+.................... void BusDatax(){ 
+.................... //LEDON; 
+.................... if (kbhit()){ 
+0049:  BTFSS  0C.5
+004A:  GOTO   0B3
+.................... Comando[i]=getc(); 
+004B:  MOVLW  28
+004C:  ADDWF  61,W
+004D:  MOVWF  04
+004E:  BCF    03.7
+004F:  CLRF   6C
+0050:  MOVF   04,W
+0051:  MOVWF  6B
+0052:  BCF    6C.0
+0053:  BTFSC  03.7
+0054:  BSF    6C.0
+*
+005F:  MOVF   6B,W
+0060:  MOVWF  04
+0061:  BCF    03.7
+0062:  BTFSC  6C.0
+0063:  BSF    03.7
+0064:  MOVF   78,W
+0065:  MOVWF  00
+.................... if (Comando[i] == 250) i=0; 
+0066:  MOVLW  28
+0067:  ADDWF  61,W
+0068:  MOVWF  04
+0069:  BCF    03.7
+006A:  MOVF   00,W
+006B:  SUBLW  FA
+006C:  BTFSS  03.2
+006D:  GOTO   070
+006E:  CLRF   61
+006F:  GOTO   071
+.................... else ++i; 
+0070:  INCF   61,F
+.................... if (i==3) Comunica(); // Tenemos un comando nuevo 
+0071:  MOVF   61,W
+0072:  SUBLW  03
+0073:  BTFSS  03.2
+0074:  GOTO   0B3
+.................... } 
+.................... } 
+....................  
+*
+00B3:  BCF    0C.5
+00B4:  BCF    0A.3
+00B5:  BCF    0A.4
+00B6:  GOTO   027
+.................... #int_timer2 
+.................... void Accion(){ // Funcion de actuacion de luces de alta velocidad (lo mas depurada posible) 
+....................  
+.................... if (TMR1H < 36){ 
+00B7:  MOVF   0F,W
+00B8:  SUBLW  23
+00B9:  BTFSS  03.0
+00BA:  GOTO   138
+.................... if (TMR1H == LuzAccion[0]) output_high(OUT1); 
+00BB:  MOVF   38,W
+00BC:  SUBWF  0F,W
+00BD:  BTFSC  03.2
+00BE:  BSF    06.1
+.................... if (TMR1H == LuzAccion[1]) output_high(OUT2); 
+00BF:  MOVF   39,W
+00C0:  SUBWF  0F,W
+00C1:  BTFSC  03.2
+00C2:  BSF    06.2
+.................... if (TMR1H == LuzAccion[2]) output_high(OUT3); 
+00C3:  MOVF   3A,W
+00C4:  SUBWF  0F,W
+00C5:  BTFSC  03.2
+00C6:  BSF    06.3
+.................... if (TMR1H == LuzAccion[3]) output_high(OUT4); 
+00C7:  MOVF   3B,W
+00C8:  SUBWF  0F,W
+00C9:  BTFSC  03.2
+00CA:  BSF    06.4
+.................... if (TMR1H == LuzAccion[4]) output_high(OUT5); 
+00CB:  MOVF   3C,W
+00CC:  SUBWF  0F,W
+00CD:  BTFSC  03.2
+00CE:  BSF    06.5
+.................... if (TMR1H == LuzAccion[5]) output_high(OUT6); 
+00CF:  MOVF   3D,W
+00D0:  SUBWF  0F,W
+00D1:  BTFSC  03.2
+00D2:  BSF    06.6
+.................... if (TMR1H == LuzAccion[6]) output_high(OUT7); 
+00D3:  MOVF   3E,W
+00D4:  SUBWF  0F,W
+00D5:  BTFSC  03.2
+00D6:  BSF    06.7
+.................... if (TMR1H == LuzAccion[7]) output_high(OUT8); 
+00D7:  MOVF   3F,W
+00D8:  SUBWF  0F,W
+00D9:  BTFSS  03.2
+00DA:  GOTO   0DF
+00DB:  BSF    03.5
+00DC:  BCF    09.1
+00DD:  BCF    03.5
+00DE:  BSF    09.1
+.................... if (TMR1H == LuzAccion[8]) output_high(OUT9); 
+00DF:  MOVF   40,W
+00E0:  SUBWF  0F,W
+00E1:  BTFSS  03.2
+00E2:  GOTO   0E7
+00E3:  BSF    03.5
+00E4:  BCF    09.2
+00E5:  BCF    03.5
+00E6:  BSF    09.2
+.................... if (TMR1H == LuzAccion[9]) output_high(OUT10); 
+00E7:  MOVF   41,W
+00E8:  SUBWF  0F,W
+00E9:  BTFSC  03.2
+00EA:  BSF    05.2
+.................... if (TMR1H == LuzAccion[10]) output_high(OUT11); 
+00EB:  MOVF   42,W
+00EC:  SUBWF  0F,W
+00ED:  BTFSS  03.2
+00EE:  GOTO   0F3
+00EF:  BSF    03.5
+00F0:  BCF    09.0
+00F1:  BCF    03.5
+00F2:  BSF    09.0
+.................... if (TMR1H == LuzAccion[11]) output_high(OUT12); 
+00F3:  MOVF   43,W
+00F4:  SUBWF  0F,W
+00F5:  BTFSC  03.2
+00F6:  BSF    05.5
+....................  
+.................... if (TMR1H == 35){     
+00F7:  MOVF   0F,W
+00F8:  SUBLW  23
+00F9:  BTFSS  03.2
+00FA:  GOTO   137
+.................... if (LuzAccion[0]>2) output_low(OUT1); 
+00FB:  MOVF   38,W
+00FC:  SUBLW  02
+00FD:  BTFSS  03.0
+00FE:  BCF    06.1
+.................... if (LuzAccion[1]>2) output_low(OUT2); 
+00FF:  MOVF   39,W
+0100:  SUBLW  02
+0101:  BTFSS  03.0
+0102:  BCF    06.2
+.................... if (LuzAccion[2]>2) output_low(OUT3); 
+0103:  MOVF   3A,W
+0104:  SUBLW  02
+0105:  BTFSS  03.0
+0106:  BCF    06.3
+.................... if (LuzAccion[3]>2) output_low(OUT4); 
+0107:  MOVF   3B,W
+0108:  SUBLW  02
+0109:  BTFSS  03.0
+010A:  BCF    06.4
+.................... if (LuzAccion[4]>2) output_low(OUT5); 
+010B:  MOVF   3C,W
+010C:  SUBLW  02
+010D:  BTFSS  03.0
+010E:  BCF    06.5
+.................... if (LuzAccion[5]>2) output_low(OUT6); 
+010F:  MOVF   3D,W
+0110:  SUBLW  02
+0111:  BTFSS  03.0
+0112:  BCF    06.6
+.................... if (LuzAccion[6]>2) output_low(OUT7); 
+0113:  MOVF   3E,W
+0114:  SUBLW  02
+0115:  BTFSS  03.0
+0116:  BCF    06.7
+.................... if (LuzAccion[7]>2) output_low(OUT8); 
+0117:  MOVF   3F,W
+0118:  SUBLW  02
+0119:  BTFSC  03.0
+011A:  GOTO   11F
+011B:  BSF    03.5
+011C:  BCF    09.1
+011D:  BCF    03.5
+011E:  BCF    09.1
+.................... if (LuzAccion[8]>2) output_low(OUT9); 
+011F:  MOVF   40,W
+0120:  SUBLW  02
+0121:  BTFSC  03.0
+0122:  GOTO   127
+0123:  BSF    03.5
+0124:  BCF    09.2
+0125:  BCF    03.5
+0126:  BCF    09.2
+.................... if (LuzAccion[9]>2) output_low(OUT10); 
+0127:  MOVF   41,W
+0128:  SUBLW  02
+0129:  BTFSS  03.0
+012A:  BCF    05.2
+.................... if (LuzAccion[10]>2) output_low(OUT11); 
+012B:  MOVF   42,W
+012C:  SUBLW  02
+012D:  BTFSC  03.0
+012E:  GOTO   133
+012F:  BSF    03.5
+0130:  BCF    09.0
+0131:  BCF    03.5
+0132:  BCF    09.0
+.................... if (LuzAccion[11]>2) output_low(OUT12); 
+0133:  MOVF   43,W
+0134:  SUBLW  02
+0135:  BTFSS  03.0
+0136:  BCF    05.5
+.................... } 
+.................... } else { 
+0137:  GOTO   1B4
+.................... if (TMR1H == LuzAccion2[0]) output_high(OUT1); 
+0138:  MOVF   44,W
+0139:  SUBWF  0F,W
+013A:  BTFSC  03.2
+013B:  BSF    06.1
+.................... if (TMR1H == LuzAccion2[1]) output_high(OUT2); 
+013C:  MOVF   45,W
+013D:  SUBWF  0F,W
+013E:  BTFSC  03.2
+013F:  BSF    06.2
+.................... if (TMR1H == LuzAccion2[2]) output_high(OUT3); 
+0140:  MOVF   46,W
+0141:  SUBWF  0F,W
+0142:  BTFSC  03.2
+0143:  BSF    06.3
+.................... if (TMR1H == LuzAccion2[3]) output_high(OUT4); 
+0144:  MOVF   47,W
+0145:  SUBWF  0F,W
+0146:  BTFSC  03.2
+0147:  BSF    06.4
+.................... if (TMR1H == LuzAccion2[4]) output_high(OUT5); 
+0148:  MOVF   48,W
+0149:  SUBWF  0F,W
+014A:  BTFSC  03.2
+014B:  BSF    06.5
+.................... if (TMR1H == LuzAccion2[5]) output_high(OUT6); 
+014C:  MOVF   49,W
+014D:  SUBWF  0F,W
+014E:  BTFSC  03.2
+014F:  BSF    06.6
+.................... if (TMR1H == LuzAccion2[6]) output_high(OUT7); 
+0150:  MOVF   4A,W
+0151:  SUBWF  0F,W
+0152:  BTFSC  03.2
+0153:  BSF    06.7
+.................... if (TMR1H == LuzAccion2[7]) output_high(OUT8); 
+0154:  MOVF   4B,W
+0155:  SUBWF  0F,W
+0156:  BTFSS  03.2
+0157:  GOTO   15C
+0158:  BSF    03.5
+0159:  BCF    09.1
+015A:  BCF    03.5
+015B:  BSF    09.1
+.................... if (TMR1H == LuzAccion2[8]) output_high(OUT9); 
+015C:  MOVF   4C,W
+015D:  SUBWF  0F,W
+015E:  BTFSS  03.2
+015F:  GOTO   164
+0160:  BSF    03.5
+0161:  BCF    09.2
+0162:  BCF    03.5
+0163:  BSF    09.2
+.................... if (TMR1H == LuzAccion2[9]) output_high(OUT10); 
+0164:  MOVF   4D,W
+0165:  SUBWF  0F,W
+0166:  BTFSC  03.2
+0167:  BSF    05.2
+.................... if (TMR1H == LuzAccion2[10]) output_high(OUT11); 
+0168:  MOVF   4E,W
+0169:  SUBWF  0F,W
+016A:  BTFSS  03.2
+016B:  GOTO   170
+016C:  BSF    03.5
+016D:  BCF    09.0
+016E:  BCF    03.5
+016F:  BSF    09.0
+.................... if (TMR1H == LuzAccion2[11]) output_high(OUT12); 
+0170:  MOVF   4F,W
+0171:  SUBWF  0F,W
+0172:  BTFSC  03.2
+0173:  BSF    05.5
+....................  
+.................... if (TMR1H == 74){     
+0174:  MOVF   0F,W
+0175:  SUBLW  4A
+0176:  BTFSS  03.2
+0177:  GOTO   1B4
+.................... if (LuzAccion[0]>2) output_low(OUT1); 
+0178:  MOVF   38,W
+0179:  SUBLW  02
+017A:  BTFSS  03.0
+017B:  BCF    06.1
+.................... if (LuzAccion[1]>2) output_low(OUT2); 
+017C:  MOVF   39,W
+017D:  SUBLW  02
+017E:  BTFSS  03.0
+017F:  BCF    06.2
+.................... if (LuzAccion[2]>2) output_low(OUT3); 
+0180:  MOVF   3A,W
+0181:  SUBLW  02
+0182:  BTFSS  03.0
+0183:  BCF    06.3
+.................... if (LuzAccion[3]>2) output_low(OUT4); 
+0184:  MOVF   3B,W
+0185:  SUBLW  02
+0186:  BTFSS  03.0
+0187:  BCF    06.4
+.................... if (LuzAccion[4]>2) output_low(OUT5); 
+0188:  MOVF   3C,W
+0189:  SUBLW  02
+018A:  BTFSS  03.0
+018B:  BCF    06.5
+.................... if (LuzAccion[5]>2) output_low(OUT6); 
+018C:  MOVF   3D,W
+018D:  SUBLW  02
+018E:  BTFSS  03.0
+018F:  BCF    06.6
+.................... if (LuzAccion[6]>2) output_low(OUT7); 
+0190:  MOVF   3E,W
+0191:  SUBLW  02
+0192:  BTFSS  03.0
+0193:  BCF    06.7
+.................... if (LuzAccion[7]>2) output_low(OUT8); 
+0194:  MOVF   3F,W
+0195:  SUBLW  02
+0196:  BTFSC  03.0
+0197:  GOTO   19C
+0198:  BSF    03.5
+0199:  BCF    09.1
+019A:  BCF    03.5
+019B:  BCF    09.1
+.................... if (LuzAccion[8]>2) output_low(OUT9); 
+019C:  MOVF   40,W
+019D:  SUBLW  02
+019E:  BTFSC  03.0
+019F:  GOTO   1A4
+01A0:  BSF    03.5
+01A1:  BCF    09.2
+01A2:  BCF    03.5
+01A3:  BCF    09.2
+.................... if (LuzAccion[9]>2) output_low(OUT10); 
+01A4:  MOVF   41,W
+01A5:  SUBLW  02
+01A6:  BTFSS  03.0
+01A7:  BCF    05.2
+.................... if (LuzAccion[10]>2) output_low(OUT11); 
+01A8:  MOVF   42,W
+01A9:  SUBLW  02
+01AA:  BTFSC  03.0
+01AB:  GOTO   1B0
+01AC:  BSF    03.5
+01AD:  BCF    09.0
+01AE:  BCF    03.5
+01AF:  BCF    09.0
+.................... if (LuzAccion[11]>2) output_low(OUT12); 
+01B0:  MOVF   43,W
+01B1:  SUBLW  02
+01B2:  BTFSS  03.0
+01B3:  BCF    05.5
+.................... } 
+.................... } 
+01B4:  BCF    0C.1
+01B5:  BCF    0A.3
+01B6:  BCF    0A.4
+01B7:  GOTO   027
+.................... } // Fn 
+....................  
+....................  
+
+Configuration Fuses:
+   Word  1: 3F75   XT WDT PUT BROWNOUT NOLVP NOCPD NOWRT NODEBUG NOPROTECT

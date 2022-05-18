@@ -1,0 +1,135 @@
+004-005 @WRITE_PROGRAM_MEMORY8.P1
+004-005 @READ_PROGRAM_MEMORY8.P2
+008     PSP_DATA
+00E     TMR1L
+00F     TMR1H
+015     CCP_1
+015     CCP_1_LOW
+016     CCP_1_HIGH
+01B     CCP_2_LOW
+01B     CCP_2
+01C     CCP_2_HIGH
+020     @INTERRUPT_AREA
+021     @INTERRUPT_AREA
+022     @INTERRUPT_AREA
+023     @INTERRUPT_AREA
+024     @INTERRUPT_AREA
+025     @INTERRUPT_AREA
+026     @INTERRUPT_AREA
+027     @INTERRUPT_AREA
+028-02B Comando
+02C-037 LuzIntensidad
+038-043 LuzAccion
+044-04F LuzEstado
+050-051 TeclaEstado
+052.0   Teclas
+053     i
+054     j
+055     @PUTCHAR_BIU_1.P1
+055     main.@SCRATCH1
+055     Entradas.@SCRATCH1
+056     @delay_ms1.P1
+056     Entradas.@SCRATCH2
+05D     Comunica.Cuenta
+05D     BusData.@SCRATCH1
+05E     Cambio.Cuenta
+05E     Accion.Cuenta
+05E     Comunica.@SCRATCH1
+05E     BusData.@SCRATCH2
+05F     Comunica.@SCRATCH2
+05F     Accion.@SCRATCH1
+05F     Cambio.@SCRATCH1
+060     Cambio.@SCRATCH2
+061     Cambio.@SCRATCH3
+062     Cambio.@SCRATCH4
+063     @MUL88.P1
+064     @MUL88.P1
+077     @SCRATCH
+078     @SCRATCH
+078     _RETURN_
+079     @SCRATCH
+07A     @SCRATCH
+07F     @INTERRUPT_AREA
+09C.6   C1OUT
+09C.7   C2OUT
+0FF     @INTERRUPT_AREA
+10D-10E @READ_PROGRAM_MEMORY8.P1
+10D-10E @WRITE_PROGRAM_MEMORY8.P2
+17F     @INTERRUPT_AREA
+1FF     @INTERRUPT_AREA
+27F     @INTERRUPT_AREA
+2FF     @INTERRUPT_AREA
+37F     @INTERRUPT_AREA
+3FF     @INTERRUPT_AREA
+47F     @INTERRUPT_AREA
+4FF     @INTERRUPT_AREA
+57F     @INTERRUPT_AREA
+5FF     @INTERRUPT_AREA
+67F     @INTERRUPT_AREA
+6FF     @INTERRUPT_AREA
+77F     @INTERRUPT_AREA
+7FF     @INTERRUPT_AREA
+87F     @INTERRUPT_AREA
+8FF     @INTERRUPT_AREA
+97F     @INTERRUPT_AREA
+9FF     @INTERRUPT_AREA
+A7F     @INTERRUPT_AREA
+AFF     @INTERRUPT_AREA
+B7F     @INTERRUPT_AREA
+BFF     @INTERRUPT_AREA
+C7F     @INTERRUPT_AREA
+CFF     @INTERRUPT_AREA
+D7F     @INTERRUPT_AREA
+DFF     @INTERRUPT_AREA
+E7F     @INTERRUPT_AREA
+EFF     @INTERRUPT_AREA
+F7F     @INTERRUPT_AREA
+FFF     @INTERRUPT_AREA
+
+ROM Allocation:
+000038  Cruce
+000040  Accion
+00014F  @goto10973
+00015F  @MUL88
+000184  Cambio
+000240  Comunica
+00027F  BusData
+00029C  @delay_ms1
+0002B1  @PUTCHAR_BIU_1
+0002BE  Entradas
+000593  main
+000593  @cinit1
+0005A8  @cinit2
+
+Project Directory:
+    D:\Dropbox\Gonzalo\Proyecto Casandra\Version final\Soft\Luces\1\
+
+Project Files:
+    main.c                                                  [01-jun-14 13:31  CRC=88E42592]
+    C:\Program Files\PICC\devices\16F877A.h                 [18-abr-14 16:56  CRC=4F277C97]
+
+Source signature=27331EC0
+
+Units:
+    main (main)
+
+Compiler Settings:
+    Processor:      PIC16F877A
+    Pointer Size:   16
+    ADC Range:      0-255
+    Opt Level:      9
+    Short,Int,Long: UNSIGNED: 1,8,16
+    Float,Double:   32,32
+    Compile Mode:       CCS5
+
+Output Files:
+    XREF file:   main.xsym
+    Errors:      main.err
+    Ext Symbols: main.esym
+    INHX8:       main.hex
+    Symbols:     main.sym
+    List:        main.lst
+    Debug/COFF:  main.cof
+    Project:     main.ccspjt
+    Call Tree:   main.tre
+    Statistics:  main.STA
