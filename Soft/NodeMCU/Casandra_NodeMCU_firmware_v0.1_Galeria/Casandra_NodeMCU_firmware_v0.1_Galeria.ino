@@ -19,7 +19,7 @@
 #include "DHT.h"
 
 #define DHT1PIN D2  // D2
-#define DHTTYPE DHT11
+#define DHTTYPE DHT22
 #define MSG_BUFFER_SIZE  (50)
 
 const char* ssid = "CasandraL2";
@@ -83,16 +83,16 @@ void callback(char* topic, byte* payload, unsigned int length) {
     UlTopic = Fin;
     Fin = strtok(NULL, s);
   }
-  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 0)) Hablador(atoi(UlTopic)+32+24, 80);
-  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 1)) Hablador(atoi(UlTopic)+32+24, 90);
-  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 2)) Hablador(atoi(UlTopic)+32+24, 120);
-  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 3)) Hablador(atoi(UlTopic)+32+24, 121);
-  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 4)) Hablador(atoi(UlTopic)+32+24, 122);
-  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 5)) Hablador(atoi(UlTopic)+32+24, 123);
+  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 0)) Hablador(atoi(UlTopic)+32+48, 80);
+  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 1)) Hablador(atoi(UlTopic)+32+48, 90);
+  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 2)) Hablador(atoi(UlTopic)+32+48, 120);
+  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 3)) Hablador(atoi(UlTopic)+32+48, 121);
+  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 4)) Hablador(atoi(UlTopic)+32+48, 122);
+  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 5)) Hablador(atoi(UlTopic)+32+48, 123);
   //if (!strcmp(PenUlTopic, "LuzIntensidad")){
   //  float dimer;
   //  dimer = ( (atoi(Pload) * (-0.27) ) + 27);
-  //  Hablador(atoi(UlTopic)+32+24, int(dimer));
+  //  Hablador(atoi(UlTopic)+32+48, int(dimer));
   //}
 }
 
@@ -157,14 +157,14 @@ if (Serial.available() > 0) {
           int Payl;
           if (buff[1] == 80) Payl = 0;
           if (buff[1] == 90) Payl = 1;
-          if ((buff[0]) < (10+32+24)) {
-            snprintf (Topicc, MSG_BUFFER_SIZE, "Casandra/Galeria/LuzEstado/0%d", (buff[0]-(32+24)));
+          if ((buff[0]) < (10+32+48)) {
+            snprintf (Topicc, MSG_BUFFER_SIZE, "Casandra/Galeria/LuzEstado/0%d", (buff[0]-(32+48)));
             snprintf (Argu, MSG_BUFFER_SIZE, "%d", Payl);
           }
-          if ((buff[0]) >= (10+32+24)) {
-            snprintf (Topicc, MSG_BUFFER_SIZE, "Casandra/Galeria/LuzEstado/%d", (buff[0]-(32+24)));
-            if ((buff[0]-(32+24)) == 11) snprintf (Topicc, MSG_BUFFER_SIZE, "Casandra/Galeria/SensorMov/01");
-            if ((buff[0]-(32+24)) == 12) snprintf (Topicc, MSG_BUFFER_SIZE, "Casandra/Galeria/SensorMov/02");
+          if ((buff[0]) >= (10+32+48)) {
+            snprintf (Topicc, MSG_BUFFER_SIZE, "Casandra/Galeria/LuzEstado/%d", (buff[0]-(32+48)));
+            if ((buff[0]-(32+48)) == 11) snprintf (Topicc, MSG_BUFFER_SIZE, "Casandra/Galeria/SensorMov/01");
+            if ((buff[0]-(32+48)) == 12) snprintf (Topicc, MSG_BUFFER_SIZE, "Casandra/Galeria/SensorMov/02");
             snprintf (Argu, MSG_BUFFER_SIZE, "%d", Payl);
           }
         client.publish(Topicc, Argu);

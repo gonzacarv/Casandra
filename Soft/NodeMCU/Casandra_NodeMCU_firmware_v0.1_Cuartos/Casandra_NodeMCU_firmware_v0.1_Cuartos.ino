@@ -19,7 +19,7 @@
 #include "DHT.h"
 
 #define DHTPIN D4
-#define DHTTYPE DHT11
+#define DHTTYPE DHT22
 #define MSG_BUFFER_SIZE  (50)
 
 const char* ssid = "CasandraC2";

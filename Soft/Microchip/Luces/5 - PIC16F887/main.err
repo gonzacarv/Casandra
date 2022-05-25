@@ -1,0 +1,5 @@
+Compiling D:\2.Datos\Electronica\Proyectos\Microchip\Git\Casandra\Soft\Microchip\Luces\5 - PIC16F887\main on 23-may.-22 at 19:02
+>>> Warning 203 "main.c" Line 126(1,1): Condition always TRUE
+      Memory usage:   ROM=22%      RAM=20% - 22%
+      0 Errors,  1 Warnings.
+Build Successful.

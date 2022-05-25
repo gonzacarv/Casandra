@@ -11,7 +11,7 @@ Type=4
 1=main.c
 
 [ProjectLog]
-Days=17
+Days=19
 D1=14-05-2014
 D1_L=9
 D1_L1=[997]Stopped Editing.
@@ -37,7 +37,7 @@ D2_L9=[76539]Started Editing.
 D2_L10=[76977]Stopped Editing.
 D2_L11=[77371]Started Editing.
 D2_L12=[77692]Stopped Editing.
-TotalEdit=801
+TotalEdit=802
 TotalDebug=0
 D3=18-05-2014
 D3_E=95
@@ -356,19 +356,32 @@ D17=14-04-2022
 D17_L=2
 D17_L1=[58819]Project Opened.
 D17_L2=[64171]Project Closed.
+D18=22-05-2022
+D18_L=3
+D18_L1=[77170]Project Opened.
+D18_L2=[80496]Project Closed.
+D18_L3=[82896]Project Opened.
+D19=23-05-2022
+D19_L=3
+D19_L1=[66463]Started Editing.
+D19_L2=[66507]Stopped Editing.
+D19_E=1
+D19_D=0
+D19_L3=[66507]Project Closed.
 
 [Opened Files]
 1=main.c
-2=
+2=..\5 - PIC16F887\main.c
 3=
-t1=1
-Count=1
+t1=53
+Count=2
+t2=53
 
 [fileformats]
 forcecoff=0
+
+[defines]
+buildcount=3
 [Units]
 Count=1
 1=main (main)
-
-[defines]
-buildcount=1

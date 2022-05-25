@@ -1,0 +1,58 @@
+
+ROM used:   1800/8192 (22%)
+            1800/8192 (22%) including unused fragments
+
+            1.2 Average locations per line
+            4.0 Average locations per statement
+
+RAM used:   73/368 (20%) at main() level
+            80/368 (22%) worst case
+
+Stack used: 2 worst case (1 in main + 1 for interrupts)
+Stack size: 8
+
+Lines Stmts  %   Files
+----- ----- ---  -----
+  742   445 100  main.c
+  786     0   0  C:\Program Files (x86)\PICC\Devices\16F887.h
+----- -----
+ 1528   445 Total
+
+Page ROM  %  RAM    Vol Diff  Functions:
+---- --- --- ---    --- ----  ----------
+0     21   1    1             @delay_ms1
+0     13   1    1             @PUTCHAR_BIU_1
+ Inline         0             @GETCH_BIU_1
+0     45   2    1    110  2.5  main
+ Inline         3    882  7.7  Comunica
+0    759  42    2   9791  6.5  Entradas
+0    382  21    4   3232  6.9  Cambio
+0    278  15    3   3560  5.4  HolaMundo
+0      8   0    0     29  1.2  Cruce
+0    110   6    4    170  3.9  BusData
+0    119   7    0   1422  3.9  Accion
+ Inline         0             @cinit1
+
+Program metrics:
+    Functions               8
+    Statements              445
+    Comments                505
+    Volume (V)              24401
+    Difficulty (D)          39.7
+    Effort to implement (E) 968101
+    Time to implement (T)   14 hours, 56 minutes
+    Est Delivered Bugs (B)  3
+    Cyclomatic Complexity   69
+    Maintainability (MI)    49
+
+ Segment     Used  Free
+-----------  ----  ----
+00000-00003     4  0  
+00004-00040    61  0  
+00041-007FF  1735  248  
+00800-00FFF     0  2048  
+01000-017FF     0  2048  
+01800-01FFF     0  2048  
+
+
+
