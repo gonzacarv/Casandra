@@ -85,22 +85,27 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Fin = strtok(NULL, s);
   }
 
-  if (!strcmp(PenUlTopic, "Porton") && (UlTopic, "SwAbrir") && (atoi(Pload) == 1)) {
+  if ( (!strcmp(PenUlTopic, "Porton")) && (!strcmp(UlTopic, "SwAbrir")) && (atoi(Pload) == 1) ) {
     digitalWrite(SwAbrir,HIGH);
-    delay(250);
+    delay(500);
     client.publish("Casandra/Porton/SwAbrir", "0");
     digitalWrite(SwAbrir,LOW);    
   }
 
-  if (!strcmp(PenUlTopic, "Porton") && (UlTopic, "SwCerrar") && (atoi(Pload) == 1)) {
+  if ( (!strcmp(PenUlTopic, "Porton")) && (!strcmp(UlTopic, "SwCerrar")) && (atoi(Pload) == 1) ) {
     digitalWrite(SwCerrar,HIGH);
-    delay(250);
+    delay(500);
     client.publish("Casandra/Porton/SwCerrar", "0");
     digitalWrite(SwCerrar,LOW);    
   }
 
- if (!strcmp(PenUlTopic, "Porton") && (UlTopic, "LuzCamino") && (atoi(Pload) == 1)) digitalWrite(LuzCamino,HIGH);
- if (!strcmp(PenUlTopic, "Porton") && (UlTopic, "LuzCamino") && (atoi(Pload) == 0)) digitalWrite(LuzCamino,LOW);
+ if ( (!strcmp(PenUlTopic, "Porton")) && (!strcmp(UlTopic, "LuzCamino")) && (atoi(Pload) == 1) ) {
+  digitalWrite(LuzCamino,HIGH);
+ }
+ if ( (!strcmp(PenUlTopic, "Porton")) && (!strcmp(UlTopic, "LuzCamino")) && (atoi(Pload) == 0) ) {
+  digitalWrite(LuzCamino,LOW);
+ }
+
 }
 
 void reconnect() {

@@ -113,8 +113,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
   }
 
-  if (!strcmp(PenUlTopic, "Caldera") && (UlTopic, "Termostato") && (atoi(Pload) == 1)) digitalWrite(Termostato,LOW); 
-  if (!strcmp(PenUlTopic, "Caldera") && (UlTopic, "Termostato") && (atoi(Pload) == 0)) digitalWrite(Termostato,HIGH); 
+  if ( (!strcmp(PenUlTopic, "Caldera")) && (!strcmp(UlTopic, "Termostato")) && (atoi(Pload) == 1)) digitalWrite(Termostato,LOW); 
+  if ( (!strcmp(PenUlTopic, "Caldera")) && (!strcmp(UlTopic, "Termostato")) && (atoi(Pload) == 0)) digitalWrite(Termostato,HIGH); 
 
 }
 
