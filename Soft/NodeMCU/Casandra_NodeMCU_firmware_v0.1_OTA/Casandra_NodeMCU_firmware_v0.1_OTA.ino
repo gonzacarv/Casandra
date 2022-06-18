@@ -20,29 +20,47 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <string>
-#include "DHT.h"
-#define DHTPIN D4
-#define DHTTYPE DHT22
-#define MSG_BUFFER_SIZE  (50)
 
 const char* MosqID = "Mosquito-CUARTOS";
-const char* mqtt_server = "192.168.0.58";
+//const char* password = "12345678";
+const char* mqtt_server = "192.168.0.215";
 String clientId = "Mosquito-CUARTOS";
-const char* Topico = "Casandra/Cuartos/#"; // Solo subscripto al topico de cuartos con comodin aguas abajo
-int ii = 0; // Contador de bus
-int buff[3]; // Lo que llega
-int h_old = 0;
-int t_old = 0;
-int EstadoPIR1 = 12;  // Digital pin D6
-int EstadoPIR2 = 13;  // Digital pin D7
-bool EstadoPIR1_old = false;
-bool EstadoPIR2_old = false;
-unsigned long lastMsg = 0;
-char Topicc[MSG_BUFFER_SIZE];
-char Argu[MSG_BUFFER_SIZE];
-DHT dht(DHTPIN, DHTTYPE);
+const char* Topico = "Casandra/Cuartos/#";
+
+#define LEDpin D7  // Declaramos el piloto de info de estado
+#define WiFiLED D6 // Declaramos el pilotode info de conexion WiFi
+#define EnTx D8    // Declaramos el habilitador de transmision
+
 WiFiClient espClient;
 PubSubClient client(espClient);
+unsigned long lastMsg = 0;
+#define MSG_BUFFER_SIZE	(50)
+char msg[MSG_BUFFER_SIZE];
+int value = 0;
+
+/*void setup_wifi() {
+
+  delay(10);
+  // Inicia conexion WiFi
+  Serial.println();
+  Serial.print("Conectandose a ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  randomSeed(micros());
+
+  Serial.println("");
+  Serial.println("WiFi conectado");
+  Serial.println("IP: ");
+  Serial.println(WiFi.localIP());
+}*/
 
 void callback(char* topic, byte* payload, unsigned int length) {
   const char s[2] = "/";
@@ -60,31 +78,34 @@ void callback(char* topic, byte* payload, unsigned int length) {
     UlTopic = Fin;
     Fin = strtok(NULL, s);
   }
+  //if (!strcmp(PenUlTopic, "LuzEstado")) printf("Es igual a LuzEstado y la variable int del final es %d y el payload es %d\n", atoi(UlTopic), atoi(Pload));
   if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 0)) Hablador(atoi(UlTopic) + 32, 80);
   if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 1)) Hablador(atoi(UlTopic) + 32, 90);
-  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 2)) Hablador(atoi(UlTopic) + 32, 120);
-  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 3)) Hablador(atoi(UlTopic) + 32, 121);
-  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 4)) Hablador(atoi(UlTopic) + 32, 122);
-  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 5)) Hablador(atoi(UlTopic) + 32, 123);
-
   if (!strcmp(PenUlTopic, "LuzIntensidad")) {
     float dimer;
     dimer = ( (atoi(Pload) * (-0.27) ) + 27);
     Hablador(atoi(UlTopic) + 32, int(dimer));
   }
+
 }
 
 /////////////////////////// Funcion que habla en el bus ////////////////////////////////////////
 void Hablador(int x, int y) { // La funcion encargada de hablar en el bus
+  digitalWrite(EnTx, HIGH); // Llego un comando nuevo, prendemos el LED
+  digitalWrite(LEDpin, HIGH);
+  delay(5);
   Serial.write(250);
   Serial.write(x);
   Serial.write(y);
   Serial.write(x + y);
   delay(25);
+  digitalWrite(EnTx, LOW);
+  digitalWrite(LEDpin, LOW);
+
 }
 void reconnect() {
-  int Reseteo = 0;
   // Loopea hasta reconectar
+  int cuenta = 0;
   while (!client.connected()) {
     Serial.print("Intentando conectar a broker MQTT..");
     // Create a random client ID
@@ -92,13 +113,17 @@ void reconnect() {
     // Attempt to connect
     if (client.connect(clientId.c_str(), "mqttuser", "MQTTpass")) {
       Serial.println("¡Conectado! :D");
+      // Once connected, publish an announcement...
+      client.publish("outTopic", "hello world");
+      // ... and resubscribe
       client.subscribe(Topico);
     } else {
       Serial.print("Falla de conexion, rc=");
       Serial.print(client.state());
       Serial.println(" intentando de nuevo en 5 segundos");
-      ++Reseteo;
-      if (Reseteo == 60) ESP.reset();
+      // Wait 5 seconds before retrying
+      ++cuenta;
+      if (cuenta == 10) ESP.reset();
       delay(5000);
     }
   }
@@ -106,27 +131,48 @@ void reconnect() {
 
 void setup() {
   WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
-  pinMode(EstadoPIR1, INPUT);
-  pinMode(EstadoPIR2, INPUT);
+  pinMode(LEDpin, OUTPUT);  // Tanto los dos pilotos...
+  pinMode(EnTx, OUTPUT);    // ...como el habilitador...
+  pinMode(WiFiLED, OUTPUT); // ...son salidas.
+  pinMode(LED_BUILTIN, OUTPUT);
   WiFiManager wm;
   wm.setConfigPortalTimeout(180);
   Serial.begin(2400);
   //wm.resetSettings();
-  dht.begin();
-  delay(10);
+  //setup_wifi();
 
-  bool res;
-  res = wm.autoConnect(MosqID); // password protected ap
-  if (!res) {
-    Serial.println("Error al conectar WiFi");
-    // ESP.restart();
-  }
-  else {
-    //if you get here you have connected to the WiFi
-    Serial.println("Conectado! ");
-  }
+    bool res;
+    
+    res = wm.autoConnect(MosqID); // password protected ap
 
-  ArduinoOTA.setHostname(MosqID);
+    if(!res) {
+        Serial.println("Error al conectar WiFi");
+        // ESP.restart();
+    } 
+    else {
+        //if you get here you have connected to the WiFi    
+        Serial.println("Conectado! ");
+    }
+
+
+
+
+
+
+
+  // Port defaults to 8266
+  // ArduinoOTA.setPort(8266);
+
+  // Hostname defaults to esp8266-[ChipID]
+   ArduinoOTA.setHostname(MosqID);
+
+  // No authentication by default
+  // ArduinoOTA.setPassword("admin");
+
+  // Password can be set with it's md5 value as well
+  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
+  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
+
   ArduinoOTA.onStart([]() {
     String type;
     if (ArduinoOTA.getCommand() == U_FLASH) {
@@ -159,9 +205,15 @@ void setup() {
     }
   });
   ArduinoOTA.begin();
+
+
+
+
+
+
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
-  //Hablador(100, 80); // Iniciamos apagando todo
+
 }
 
 void loop() {
@@ -170,61 +222,9 @@ void loop() {
     reconnect();
   }
   client.loop();
+  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(2000);                       // wait for a second
+  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
+  delay(2000);                       // wait for a second
 
-  /////////////////////////////////////////////// Recepcion de datos y actualizacion MQTT //////////////////////////////
-  if (Serial.available() > 0) {
-
-    buff[ii] = Serial.read();
-    if (buff[ii] == 250) ii = 0;
-    else ++ii;
-    if (ii == 3) {
-      if (( (buff[0]) + (buff[1]) ) == buff[2]) { // Prueba de checksum
-        int Payl;
-        if (buff[1] == 80) Payl = 0;
-        if (buff[1] == 90) Payl = 1;
-        if ((buff[0]) < (10 + 32)) {
-          snprintf (Topicc, MSG_BUFFER_SIZE, "Casandra/Cuartos/LuzEstado/0%d", (buff[0] - 32));
-          snprintf (Argu, MSG_BUFFER_SIZE, "%d", Payl);
-        }
-        if ((buff[0]) >= (10 + 32)) {
-          snprintf (Topicc, MSG_BUFFER_SIZE, "Casandra/Cuartos/LuzEstado/%d", (buff[0] - 32));
-          snprintf (Argu, MSG_BUFFER_SIZE, "%d", Payl);
-        }
-        client.publish(Topicc, Argu);
-      } // Prueba de Checksum
-      ii = 0;
-    } // Cuando el contador llega a 3
-  } // Cuando llego algo al buffer
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  unsigned long now = millis(); // ciclado cada 30 segundos
-  if (now - lastMsg > 30000) {
-    lastMsg = now;
-    char buffer[4];
-    int h = (int) dht.readHumidity();   // Leemos la humedad
-    if ((h != h_old) && (h < 100) && (h > 0)) {
-      h_old = h;
-      sprintf(buffer, "%d", h);
-      client.publish("Casandra/Cuartos/Humedad/01", buffer);
-    }
-    int t = (int) dht.readTemperature(); // Leemos la temperatura
-    if ((t != t_old) && (t < 50) && (t > 0)) {
-      t_old = t;
-      sprintf(buffer, "%d", t);
-      client.publish("Casandra/Cuartos/Temperatura/01", buffer);
-    }
-    //publicamos ambos datos
-  } // Loop cada 30 segundos
-
-  if (digitalRead(EstadoPIR1) != EstadoPIR1_old) { //Son distintos, guardamos el nuevo en el viejo
-    EstadoPIR1_old = digitalRead(EstadoPIR1);
-    if (EstadoPIR1_old) client.publish("Casandra/Cuartos/SensorMov/01", "1");
-    else client.publish("Casandra/Cuartos/SensorMov/01", "0");
-  }
-
-  if (digitalRead(EstadoPIR2) != EstadoPIR2_old) { //Son distintos, guardamos el nuevo en el viejo
-    EstadoPIR2_old = digitalRead(EstadoPIR2);
-    if (EstadoPIR2_old) client.publish("Casandra/Cuartos/SensorMov/02", "1");
-    else client.publish("Casandra/Cuartos/SensorMov/02", "0");
-  }
 }
