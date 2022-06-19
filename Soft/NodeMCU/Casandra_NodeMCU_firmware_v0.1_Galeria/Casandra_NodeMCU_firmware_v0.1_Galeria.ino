@@ -196,9 +196,11 @@ void loop() {
     } // Cuando el contador llega a 3
   } // Cuando llego algo al buffer
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+  int Trein;
   unsigned long now = millis(); // ciclado cada 30 segundos
-  if (now - lastMsg > 30000) {
+  if (now - lastMsg > 1000) {
+    ++Trein;
+    if (Trein >= 31) Trein = 0;
     lastMsg = now;
     char buffer[4];
     int h1 = (int) dht1.readHumidity();   // Leemos la humedad
@@ -214,6 +216,8 @@ void loop() {
       client.publish("Casandra/Galeria/Temperatura/01", buffer);
     }
     //publicamos ambos datos
+    if (Trein == 5) client.publish("Casandra/Galeria/Humedad/01", buffer);
+    if (Trein == 20) client.publish("Casandra/Galeria/Temperatura/01", buffer);
 
   } // Loop cada 30 segundos
 

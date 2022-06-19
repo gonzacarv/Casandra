@@ -112,7 +112,7 @@ void reconnect() {
       Serial.print(client.state());
       Serial.println(" intentando de nuevo en 5 segundos");
       ++Reseteo;
-      if (Reseteo == 10) ESP.reset(); 
+      if (Reseteo == 30) ESP.reset(); 
       delay(5000);
     }
   }
@@ -192,9 +192,11 @@ void loop() {
     reconnect();
   }
   client.loop();
-
-  unsigned long now = millis(); // ciclado cada 30 segundos
-  if (now - lastMsg > 10000) {
+  int Trein;
+  unsigned long now = millis(); // ciclado cada 1 segundos
+  if (now - lastMsg > 1000) {
+    ++Trein;
+    if (Trein >= 31) Trein = 0;
     lastMsg = now;
     char buffer[4];
     SensTemp.requestTemperatures(); 
@@ -204,20 +206,25 @@ void loop() {
       if (TempC < 100) sprintf(buffer, "%d", TempC);
       client.publish("Casandra/Caldera/Temperatura", buffer);
     }
+    if (Trein == 5) client.publish("Casandra/Caldera/Temperatura", buffer);
+
     float LuzTemporal; 
     LuzIntens = analogRead(analogInPin);
     if (LuzIntens >= 200) LuzTemporal = ((LuzIntens * 0.11) + 28);
     if (LuzIntens < 200) LuzTemporal = (LuzIntens * 0.25);
     if (((int) LuzTemporal) > 100) LuzTemporal =  100;
     sprintf(buffer, "%d", (int) LuzTemporal);
-    client.publish("Casandra/Caldera/LuzSolar", buffer);
+    if (Trein == 20) client.publish("Casandra/Caldera/LuzSolar", buffer);
 
     if (digitalRead(Lluvia) != Lluvia_old){ //Son distintos, guardamos el nuevo en el viejo
       Lluvia_old = digitalRead(Lluvia);
       if (Lluvia_old) client.publish("Casandra/Caldera/Lluvia", "1");
       else client.publish("Casandra/Caldera/Lluvia", "0");
     }
-
+//    if (Trein == 12) {
+//      if (Lluvia_old) client.publish("Casandra/Caldera/Lluvia", "1"); // Para activar cuando ande el sensor de lluvia, al
+//      else client.publish("Casandra/Caldera/Lluvia", "0");            // bloque de arriba lo dejamos por infrecuente
+//    }
   } // Loop cada 10 segundos
 
 //Bloque de loop sin espera

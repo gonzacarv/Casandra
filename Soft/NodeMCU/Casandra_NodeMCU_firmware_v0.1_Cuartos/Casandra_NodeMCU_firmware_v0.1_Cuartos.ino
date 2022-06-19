@@ -135,7 +135,6 @@ void setup() {
       type = "filesystem";
     }
 
-    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
     Serial.println("Start updating " + type);
   });
   ArduinoOTA.onEnd([]() {
@@ -196,9 +195,11 @@ void loop() {
     } // Cuando el contador llega a 3
   } // Cuando llego algo al buffer
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  unsigned long now = millis(); // ciclado cada 30 segundos
-  if (now - lastMsg > 30000) {
+  int Trein;
+  unsigned long now = millis(); // ciclado cada 1 segundo
+  if (now - lastMsg > 1000) {
+    ++Trein;
+    if (Trein >= 31) Trein = 0;
     lastMsg = now;
     char buffer[4];
     int h = (int) dht.readHumidity();   // Leemos la humedad
@@ -214,7 +215,9 @@ void loop() {
       client.publish("Casandra/Cuartos/Temperatura/01", buffer);
     }
     //publicamos ambos datos
-  } // Loop cada 30 segundos
+    if (Trein == 5) client.publish("Casandra/Cuartos/Humedad/01", buffer);
+    if (Trein == 20) client.publish("Casandra/Cuartos/Temperatura/01", buffer);
+  } // Loop cada 1 segundo
 
   if (digitalRead(EstadoPIR1) != EstadoPIR1_old) { //Son distintos, guardamos el nuevo en el viejo
     EstadoPIR1_old = digitalRead(EstadoPIR1);
