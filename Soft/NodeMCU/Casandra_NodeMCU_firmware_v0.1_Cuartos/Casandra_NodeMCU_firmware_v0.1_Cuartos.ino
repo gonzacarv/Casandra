@@ -38,6 +38,7 @@ int EstadoPIR2 = 13;  // Digital pin D7
 bool EstadoPIR1_old = false;
 bool EstadoPIR2_old = false;
 unsigned long lastMsg = 0;
+int Trein = 0;
 char Topicc[MSG_BUFFER_SIZE];
 char Argu[MSG_BUFFER_SIZE];
 DHT dht(DHTPIN, DHTTYPE);
@@ -195,7 +196,6 @@ void loop() {
     } // Cuando el contador llega a 3
   } // Cuando llego algo al buffer
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  int Trein;
   unsigned long now = millis(); // ciclado cada 1 segundo
   if (now - lastMsg > 1000) {
     ++Trein;

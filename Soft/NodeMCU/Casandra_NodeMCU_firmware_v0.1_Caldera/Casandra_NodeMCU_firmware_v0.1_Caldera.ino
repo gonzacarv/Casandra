@@ -46,6 +46,7 @@ int Luz_old = 0;
 bool Lluvia_old = false;
 //bool EstadoPIR2_old = false;
 unsigned long lastMsg = 0;
+int Trein = 0;
 char Topicc[MSG_BUFFER_SIZE];
 char Argu[MSG_BUFFER_SIZE];
 
@@ -192,7 +193,6 @@ void loop() {
     reconnect();
   }
   client.loop();
-  int Trein;
   unsigned long now = millis(); // ciclado cada 1 segundos
   if (now - lastMsg > 1000) {
     ++Trein;

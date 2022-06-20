@@ -35,6 +35,7 @@ int buff[3]; // Lo que llega
 int h1_old = 0;
 int t1_old = 0;
 unsigned long lastMsg = 0;
+int Trein = 0;
 char Topicc[MSG_BUFFER_SIZE];
 char Argu[MSG_BUFFER_SIZE];
 DHT dht1(DHT1PIN, DHTTYPE);
@@ -196,7 +197,6 @@ void loop() {
     } // Cuando el contador llega a 3
   } // Cuando llego algo al buffer
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  int Trein;
   unsigned long now = millis(); // ciclado cada 30 segundos
   if (now - lastMsg > 1000) {
     ++Trein;

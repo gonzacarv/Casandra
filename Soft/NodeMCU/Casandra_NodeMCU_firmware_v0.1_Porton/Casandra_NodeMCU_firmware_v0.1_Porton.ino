@@ -40,6 +40,7 @@ bool EstadoPuerta_old = false;
 bool EstadoPorton_old = false;
 bool EstadoTimbre_old = false;
 unsigned long lastMsg = 0;
+int Tim = 0;
 char Topicc[MSG_BUFFER_SIZE];
 char Argu[MSG_BUFFER_SIZE];
 
@@ -180,8 +181,7 @@ void loop() {
   client.loop();
 
   unsigned long now = millis(); // ciclado cada 1 segundo
-  int Tim = 0;
-
+  
   if (now - lastMsg > 500) {
 
     if (Tim == 0) {

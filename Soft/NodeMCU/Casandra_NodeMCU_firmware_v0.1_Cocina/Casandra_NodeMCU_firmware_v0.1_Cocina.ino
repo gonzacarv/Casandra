@@ -52,6 +52,7 @@ bool EstadoPIR4_old = false;
 //bool EstadoPIR5_old = false;
 //bool EstadoPIR6_old = false;
 unsigned long lastMsg = 0;
+int Trein = 0;
 char Topicc[MSG_BUFFER_SIZE];
 char Argu[MSG_BUFFER_SIZE];
 
@@ -251,7 +252,6 @@ if (Serial.available() > 0) {
       } // Cuando el contador llega a 3
   } // Cuando llego algo al buffer
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  int Trein;
   unsigned long now = millis(); // ciclado cada 30 segundos
   if (now - lastMsg > 1000) {
     ++Trein;
