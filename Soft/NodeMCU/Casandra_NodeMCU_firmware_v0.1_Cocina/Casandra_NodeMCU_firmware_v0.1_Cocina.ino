@@ -271,8 +271,14 @@ if (Serial.available() > 0) {
       client.publish("Casandra/Cocina/Temperatura/01", buffer);
     }
   //publicamos ambos datos
-    if (Trein == 5)  client.publish("Casandra/Cocina/Humedad/01", buffer);
-    if (Trein == 20) client.publish("Casandra/Cocina/Temperatura/01", buffer);
+    if (Trein == 5)  {
+      sprintf(buffer, "%d", h1_old);
+      client.publish("Casandra/Cocina/Humedad/01", buffer);
+    }
+    if (Trein == 20) {
+      sprintf(buffer, "%d", t1_old);
+      client.publish("Casandra/Cocina/Temperatura/01", buffer);
+    }
 
       int h2 = (int) dht2.readHumidity();   // Leemos la humedad
     if ((h2 != h2_old) && (h2<100) && (h2>0)){
@@ -287,8 +293,14 @@ if (Serial.available() > 0) {
       client.publish("Casandra/Cocina/Temperatura/02", buffer);
     }
   //publicamos ambos datos
-    if (Trein == 10) client.publish("Casandra/Cocina/Humedad/02", buffer);
-    if (Trein == 25) client.publish("Casandra/Cocina/Temperatura/02", buffer);
+    if (Trein == 10) {
+      sprintf(buffer, "%d", h2_old);
+      client.publish("Casandra/Cocina/Humedad/02", buffer);
+    }
+    if (Trein == 25) {
+      sprintf(buffer, "%d", t2_old);
+      client.publish("Casandra/Cocina/Temperatura/02", buffer);
+    }
     
   } // Loop cada 30 segundos
 

@@ -206,7 +206,10 @@ void loop() {
       if (TempC < 100) sprintf(buffer, "%d", TempC);
       client.publish("Casandra/Caldera/Temperatura", buffer);
     }
-    if (Trein == 5) client.publish("Casandra/Caldera/Temperatura", buffer);
+    if (Trein == 5) {
+      sprintf(buffer, "%d", TempC_old);
+      client.publish("Casandra/Caldera/Temperatura", buffer);
+    }
 
     float LuzTemporal; 
     LuzIntens = analogRead(analogInPin);

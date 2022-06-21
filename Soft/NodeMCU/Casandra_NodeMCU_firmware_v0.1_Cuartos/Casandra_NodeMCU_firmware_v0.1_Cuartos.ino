@@ -215,8 +215,14 @@ void loop() {
       client.publish("Casandra/Cuartos/Temperatura/01", buffer);
     }
     //publicamos ambos datos
-    if (Trein == 5) client.publish("Casandra/Cuartos/Humedad/01", buffer);
-    if (Trein == 20) client.publish("Casandra/Cuartos/Temperatura/01", buffer);
+    if (Trein == 5) {
+      sprintf(buffer, "%d", h_old);
+      client.publish("Casandra/Cuartos/Humedad/01", buffer);
+    }
+    if (Trein == 20) {
+      sprintf(buffer, "%d", t_old);
+      client.publish("Casandra/Cuartos/Temperatura/01", buffer);
+    }
   } // Loop cada 1 segundo
 
   if (digitalRead(EstadoPIR1) != EstadoPIR1_old) { //Son distintos, guardamos el nuevo en el viejo

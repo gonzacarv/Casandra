@@ -216,8 +216,14 @@ void loop() {
       client.publish("Casandra/Galeria/Temperatura/01", buffer);
     }
     //publicamos ambos datos
-    if (Trein == 5) client.publish("Casandra/Galeria/Humedad/01", buffer);
-    if (Trein == 20) client.publish("Casandra/Galeria/Temperatura/01", buffer);
+    if (Trein == 5) {
+      sprintf(buffer, "%d", h1_old);
+      client.publish("Casandra/Galeria/Humedad/01", buffer);
+    }
+    if (Trein == 20) {
+      sprintf(buffer, "%d", t1_old);
+      client.publish("Casandra/Galeria/Temperatura/01", buffer);
+    }
 
   } // Loop cada 30 segundos
 
