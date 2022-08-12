@@ -26,7 +26,7 @@
 #define DHT2PIN D3  // D3
 #define Rele1 4     // Rele1 D2
 #define Rele2 5     // Rele2 D1
-#define DHTTYPE DHT11
+#define DHTTYPE DHT22
 #define MSG_BUFFER_SIZE  (50)
 
 const char* MosqID = "Mosquito-COCINA";

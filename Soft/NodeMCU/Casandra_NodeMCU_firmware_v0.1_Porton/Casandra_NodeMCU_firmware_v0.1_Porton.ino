@@ -64,17 +64,15 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Fin = strtok(NULL, s);
   }
 
-  if ( (!strcmp(PenUlTopic, "Porton")) && (!strcmp(UlTopic, "SwAbrir")) && (atoi(Pload) == 1) ) {
+  if ( (!strcmp(PenUlTopic, "Porton")) && (!strcmp(UlTopic, "BtnAbrir")) ) {
     digitalWrite(SwAbrir, HIGH);
     delay(500);
-    client.publish("Casandra/Porton/SwAbrir", "0");
     digitalWrite(SwAbrir, LOW);
   }
 
-  if ( (!strcmp(PenUlTopic, "Porton")) && (!strcmp(UlTopic, "SwCerrar")) && (atoi(Pload) == 1) ) {
+  if ( (!strcmp(PenUlTopic, "Porton")) && (!strcmp(UlTopic, "BtnCerrar")) ) {
     digitalWrite(SwCerrar, HIGH);
     delay(500);
-    client.publish("Casandra/Porton/SwCerrar", "0");
     digitalWrite(SwCerrar, LOW);
   }
 
