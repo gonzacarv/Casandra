@@ -28,13 +28,13 @@
 #define RR D5       // Red   D5
 #define GG D6       // Green D6
 #define BB D7       // Blue  D7
-#define IRAire D3   // IR del aire
-#define IRTele D4   // IR de Tele-Deco
-#define IRInput D1  // Entrada IR
-#define DHTPIN D2   // DHT22
+#define IRAire D2   // IR del aire
+#define IRTele D1   // IR de Tele-Deco
+//#define IRInput D1  // Entrada IR
+#define DHTPIN D3   // DHT22
 #define MSG_BUFFER_SIZE  (50)
 
-IRSamsungAc AA(IRAire);     // Set the GPIO used for sending messages.
+IRSamsungAc AA(4);     // Set the GPIO used for sending messages.
 IRsend IRTVDeco(IRTele);
 
 const char* MosqID = "Mosquito-ESTAR";
@@ -138,27 +138,89 @@ void callback(char* topic, byte* payload, unsigned int length) { // Funcion de l
       if (!strcmp(UlTopic, "DecoBtn6")) IRTVDeco.sendNEC(0x10138C7, 32); 
       if (!strcmp(UlTopic, "DecoBtn7")) IRTVDeco.sendNEC(0x101A05F, 32); 
       if (!strcmp(UlTopic, "DecoBtn8")) IRTVDeco.sendNEC(0x101A857, 32); 
-      if (!strcmp(UlTopic, "DecoBtn9")) {
-        // Bloque para pruebas
-        IRTVDeco.sendNEC(0x101B847, 32); // Verdadero boton "9" = 0x101B847
-      }
+      if (!strcmp(UlTopic, "DecoBtn9")) IRTVDeco.sendNEC(0x101B847, 32); // Verdadero boton "9" = 0x101B847
     }
-
     if (!strcmp(PenUlTopic, "AA")){
-      if (!strcmp(UlTopic, "Fan")){
-        // decodificamos el status del fan
+      if (!strcmp(UlTopic, "Modo")){ //[“auto”, “off”, “cool”, “heat”, “dry”, “fan_only”]
+        if (!strcmp(Pload, "auto")) {
+          AA.on();
+          AA.setMode(kSamsungAcAuto);
+          AA.send();
+          Serial.print("Modo es AUTO \n");
+        }
+        if (!strcmp(Pload, "off")) {
+          AA.off();
+          AA.send();
+          Serial.print("Modo es APAGADO \n");
+        }
+        if (!strcmp(Pload, "cool")) {
+          AA.on();
+          AA.setMode(kSamsungAcCool);
+          AA.send();
+          Serial.print("Modo es FRIO \n");
+        }
+        if (!strcmp(Pload, "heat")) {
+          AA.on();
+          AA.setMode(kSamsungAcHeat);
+          AA.send();
+          Serial.print("Modo es CALOR \n");
+        }
+        if (!strcmp(Pload, "dry")) {
+          AA.on();
+          AA.setMode(kSamsungAcDry);
+          AA.send();
+          Serial.print("Modo es DESHUMIDIFICAR \n");
+        }
+        if (!strcmp(Pload, "fan_only")) {
+          AA.on();
+          AA.setMode(kSamsungAcFan);
+          AA.send();
+          Serial.print("Modo es SOLO VENTILADOR \n");
+        }
       }
-      if (!strcmp(UlTopic, "Modo")){
-        // decodificamos el status del modo
+      if (!strcmp(UlTopic, "Fan")){ //[“auto”, “low”, “medium”, “high”]
+        if (!strcmp(Pload, "auto")) {
+          AA.setFan(kSamsungAcFanAuto);
+          AA.send();
+          Serial.print("Fan esta en modo AUTO \n");
+        }
+        if (!strcmp(Pload, "low")) {
+          AA.setFan(kSamsungAcFanLow);
+          AA.send();
+          Serial.print("Fan esta en modo BAJO \n");
+        }
+        if (!strcmp(Pload, "medium")) {
+          AA.setFan(kSamsungAcFanMed);
+          AA.send();
+          Serial.print("Fan esta en modo MEDIO \n");
+        }
+        if (!strcmp(Pload, "high")) {
+          AA.setFan(kSamsungAcFanHigh);
+          AA.send();
+          Serial.print("Fan esta en modo ALTO \n");
+        }
       }
-      if (!strcmp(UlTopic, "Swing")){
-        // decodificamos el status del swing
+      if (!strcmp(UlTopic, "Swing")){ //[“on”, “off”]
+        if (!strcmp(Pload, "on")) {
+          AA.setSwing(true);
+          AA.send();
+          Serial.print("Swing PRENDIDO \n");
+        }
+        if (!strcmp(Pload, "off")) {
+          AA.setSwing(false);
+          AA.send();
+          Serial.print("Swing APAGADO \n");
+        }
       }
-      if (!strcmp(UlTopic, "TempObj")){
+      if (!strcmp(UlTopic, "TempObj")){ // valor numerico de la temperatura
+        AA.setTemp(atoi(Pload));
+        AA.send();
+        Serial.println("La temperatura obj es: ");
+        Serial.println(atoi(Pload));
+        Serial.println("\n");
         // decodificamos la temperatura objetivo
       }
     }
-
   }
 
 void reconnect() {
