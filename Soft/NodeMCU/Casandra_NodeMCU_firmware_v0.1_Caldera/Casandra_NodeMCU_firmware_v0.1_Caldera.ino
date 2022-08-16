@@ -216,13 +216,16 @@ void loop() {
     if (LuzIntens >= 200) LuzTemporal = ((LuzIntens * 0.11) + 28);
     if (LuzIntens < 200) LuzTemporal = (LuzIntens * 0.25);
     if (((int) LuzTemporal) > 100) LuzTemporal =  100;
-    sprintf(buffer, "%d", (int) LuzTemporal);
+//    sprintf(buffer, "%d", (int) LuzTemporal);
+    sprintf(buffer, "%d", (int) LuzIntens);
     if (Trein == 20) client.publish("Casandra/Caldera/LuzSolar", buffer);
 
+    if (Trein == 12) {
     if (digitalRead(Lluvia) != Lluvia_old){ //Son distintos, guardamos el nuevo en el viejo
       Lluvia_old = digitalRead(Lluvia);
-      if (Lluvia_old) client.publish("Casandra/Caldera/Lluvia", "1");
-      else client.publish("Casandra/Caldera/Lluvia", "0");
+      if (Lluvia_old) client.publish("Casandra/Caldera/Lluvia", "0");
+      else client.publish("Casandra/Caldera/Lluvia", "1");
+    }
     }
 //    if (Trein == 12) {
 //      if (Lluvia_old) client.publish("Casandra/Caldera/Lluvia", "1"); // Para activar cuando ande el sensor de lluvia, al
