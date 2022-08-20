@@ -213,11 +213,12 @@ void loop() {
 
     float LuzTemporal; 
     LuzIntens = analogRead(analogInPin);
-    if (LuzIntens >= 200) LuzTemporal = ((LuzIntens * 0.11) + 28);
-    if (LuzIntens < 200) LuzTemporal = (LuzIntens * 0.25);
+    if (LuzIntens < 100) LuzTemporal = (LuzIntens * 0.333);
+    if (LuzIntens >= 100) LuzTemporal = ((LuzIntens * 0.026) + 31);
+    if (LuzIntens >= 700) LuzTemporal = ((LuzIntens * 0.157) - 60);
     if (((int) LuzTemporal) > 100) LuzTemporal =  100;
-//    sprintf(buffer, "%d", (int) LuzTemporal);
-    sprintf(buffer, "%d", (int) LuzIntens);
+    sprintf(buffer, "%d", (int) LuzTemporal);  // Numero procesado
+//    sprintf(buffer, "%d", (int) LuzIntens);  // Numero puro
     if (Trein == 20) client.publish("Casandra/Caldera/LuzSolar", buffer);
 
     if (Trein == 12) {
