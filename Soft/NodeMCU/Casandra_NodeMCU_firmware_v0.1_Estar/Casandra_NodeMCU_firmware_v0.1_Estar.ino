@@ -56,6 +56,7 @@ unsigned long lastMsg = 0;
 int Trein = 0;
 char Topicc[MSG_BUFFER_SIZE];
 char Argu[MSG_BUFFER_SIZE];
+bool RGBEstado;
 DHT dht(DHTPIN, DHT22);
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -107,19 +108,27 @@ void callback(char* topic, byte* payload, unsigned int length) { // Funcion de l
       RGBs = strtok(NULL, separador);
     }
     //printf( "\n\n//////////// SET solo cuando el topic es LuzRGB ///////////\n");
-    RGBSet();
+    if (RGBEstado) RGBSet();
+    else RGBOff();
   }
 
   if (!strcmp(UlTopic, "LuzIntensidad")) {
     dimer = (atof(Pload) / 100);
     //printf( "\n\n//////////// SET solo cuando el topic es LuzIntensidad ///////////\n");
-    RGBSet();
+    if (RGBEstado) RGBSet();
+    else RGBOff();
   }
 
   if ((!strcmp(UlTopic, "LuzEstado")) ){ 
     //printf( "\n\n//////////// SET u OFF solo cuando el topic es LuzEstado ///////////\n");
-    if (atoi(Pload) == 0) RGBOff();
-    if (atoi(Pload) == 1) RGBSet();
+    if (atoi(Pload) == 0) {
+      RGBEstado = false;
+      RGBOff();
+    }
+    if (atoi(Pload) == 1) {
+      RGBEstado = true;
+      RGBSet();
+    }
   }
 
     if (!strcmp(PenUlTopic, "CRemoto")){  /////////////////////////// Bloque de control IR TV y deco //////////////
