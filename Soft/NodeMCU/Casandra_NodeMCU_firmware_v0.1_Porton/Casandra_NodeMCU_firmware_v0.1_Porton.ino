@@ -189,18 +189,18 @@ void loop() {
         if (EstadoTimbre_old) client.publish("Casandra/Porton/Timbre", "1");
         else client.publish("Casandra/Porton/Timbre", "0");
       }
-    } else --Tim;
+    } else Tim = Tim - 1;
 
     if (digitalRead(SensPuerta) != EstadoPuerta_old) { //Son distintos, guardamos el nuevo en el viejo
       EstadoPuerta_old = digitalRead(SensPuerta);
-      if (EstadoPuerta_old) client.publish("Casandra/Porton/SensorPuerta", "1");
-      else client.publish("Casandra/Porton/SensorPuerta", "0");
+      if (EstadoPuerta_old) client.publish("Casandra/Porton/SensorPuerta", "0");
+      else client.publish("Casandra/Porton/SensorPuerta", "1");
     }
 
     if (digitalRead(SensPorton) != EstadoPorton_old) { //Son distintos, guardamos el nuevo en el viejo
       EstadoPorton_old = digitalRead(SensPorton);
-      if (EstadoPorton_old) client.publish("Casandra/Porton/SensorPorton", "1");
-      else client.publish("Casandra/Porton/SensorPorton", "0");
+      if (EstadoPorton_old) client.publish("Casandra/Porton/SensorPorton", "0");
+      else client.publish("Casandra/Porton/SensorPorton", "1");
     }
 
   } // Loop cada 1 segundo
