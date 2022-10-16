@@ -632,11 +632,11 @@ LuzEstado[Cuenta] = 80;  // Por defecto todas las luces apagadas
 LEDON;
 printf("%c%c%c%c", 250, 184, 53, 184+53); //Identificacion de inicio (49 es 1; 50 es 2; 51 es 3; 52 es 4 y 53 es 5) // Identificacion de red
 delay_ms(50);
-//restart_wdt(); // Reiniciamos el perro
-//printf("%c%c%c%c", 250, 184, 53, 184+53); //Identificacion de inicio (49 es 1; 50 es 2; 51 es 3; 52 es 4 y 53 es 5) // Identificacion de red
-//delay_ms(50);
-//restart_wdt(); // Reiniciamos el perro
-//printf("%c%c%c%c", 250, 184, 53, 184+53); //Identificacion de inicio (49 es 1; 50 es 2; 51 es 3; 52 es 4 y 53 es 5) // Identificacion de red
+restart_wdt(); // Reiniciamos el perro
+printf("%c%c%c%c", 250, 184, 53, 184+53); //Identificacion de inicio (49 es 1; 50 es 2; 51 es 3; 52 es 4 y 53 es 5) // Identificacion de red
+delay_ms(50);
+restart_wdt(); // Reiniciamos el perro
+printf("%c%c%c%c", 250, 184, 53, 184+53); //Identificacion de inicio (49 es 1; 50 es 2; 51 es 3; 52 es 4 y 53 es 5) // Identificacion de red
 //delay_ms(50);
 //restart_wdt(); // Reiniciamos el perro
 

@@ -11,7 +11,7 @@ Type=4
 1=main.c
 
 [ProjectLog]
-Days=16
+Days=17
 D1=14-05-2014
 D1_L=9
 D1_L1=[997]Stopped Editing.
@@ -352,6 +352,10 @@ D16_L2=[49863]Started Editing.
 D16_L3=[50214]Stopped Editing.
 D16_L4=[51255]Started Editing.
 D16_L5=[51579]Stopped Editing.
+D17=12-10-2022
+D17_L=2
+D17_L1=[48448]Project Opened.
+D17_L2=[68687]Project Closed.
 
 [Opened Files]
 1=main.c
@@ -360,3 +364,6 @@ D16_L5=[51579]Stopped Editing.
 [Units]
 Count=1
 1=main (main)
+
+[fileformats]
+forcecoff=0

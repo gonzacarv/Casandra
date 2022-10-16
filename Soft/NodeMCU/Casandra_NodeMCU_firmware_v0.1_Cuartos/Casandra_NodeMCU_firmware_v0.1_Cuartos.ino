@@ -25,6 +25,7 @@
 #define DHTTYPE DHT22
 #define MSG_BUFFER_SIZE  (50)
 
+bool debu = false;
 const char* MosqID = "Mosquito-CUARTOS";
 const char* mqtt_server = "192.168.0.58";
 String clientId = "Mosquito-CUARTOS";
@@ -87,17 +88,17 @@ void reconnect() {
   int Reseteo = 0;
   // Loopea hasta reconectar
   while (!client.connected()) {
-    Serial.print("Intentando conectar a broker MQTT..");
+    if (debu) Serial.print("Intentando conectar a broker MQTT..");
     // Create a random client ID
     clientId += String(random(0xffff), HEX);
     // Attempt to connect
     if (client.connect(clientId.c_str(), "mqttuser", "MQTTpass")) {
-      Serial.println("¡Conectado! :D");
+      if (debu) Serial.println("¡Conectado! :D");
       client.subscribe(Topico);
     } else {
-      Serial.print("Falla de conexion, rc=");
-      Serial.print(client.state());
-      Serial.println(" intentando de nuevo en 5 segundos");
+      if (debu) Serial.print("Falla de conexion, rc=");
+      if (debu) Serial.print(client.state());
+      if (debu) Serial.println(" intentando de nuevo en 5 segundos");
       ++Reseteo;
       if (Reseteo == 60) ESP.reset();
       delay(5000);
@@ -119,12 +120,12 @@ void setup() {
   bool res;
   res = wm.autoConnect(MosqID); // password protected ap
   if (!res) {
-    Serial.println("Error al conectar WiFi");
+    if (debu) Serial.println("Error al conectar WiFi");
     // ESP.restart();
   }
   else {
     //if you get here you have connected to the WiFi
-    Serial.println("Conectado! ");
+    if (debu) Serial.println("Conectado! ");
   }
 
   ArduinoOTA.setHostname(MosqID);
@@ -136,26 +137,26 @@ void setup() {
       type = "filesystem";
     }
 
-    Serial.println("Start updating " + type);
+    if (debu) Serial.println("Start updating " + type);
   });
   ArduinoOTA.onEnd([]() {
-    Serial.println("\nEnd");
+    if (debu) Serial.println("\nEnd");
   });
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    if (debu) Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
   });
   ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
+    if (debu) Serial.printf("Error[%u]: ", error);
     if (error == OTA_AUTH_ERROR) {
-      Serial.println("Auth Failed");
+      if (debu) Serial.println("Auth Failed");
     } else if (error == OTA_BEGIN_ERROR) {
-      Serial.println("Begin Failed");
+      if (debu) Serial.println("Begin Failed");
     } else if (error == OTA_CONNECT_ERROR) {
-      Serial.println("Connect Failed");
+      if (debu) Serial.println("Connect Failed");
     } else if (error == OTA_RECEIVE_ERROR) {
-      Serial.println("Receive Failed");
+      if (debu) Serial.println("Receive Failed");
     } else if (error == OTA_END_ERROR) {
-      Serial.println("End Failed");
+      if (debu) Serial.println("End Failed");
     }
   });
   ArduinoOTA.begin();
@@ -190,7 +191,10 @@ void loop() {
           snprintf (Topicc, MSG_BUFFER_SIZE, "Casandra/Cuartos/LuzEstado/%d", (buff[0] - 32));
           snprintf (Argu, MSG_BUFFER_SIZE, "%d", Payl);
         }
-        client.publish(Topicc, Argu);
+        if (buff[0] == 184) {
+          if (buff[1] == 49) client.publish("Casandra/Cuartos/Modulo/1","off");
+          if (buff[1] == 50) client.publish("Casandra/Cuartos/Modulo/2","off");
+        } else client.publish(Topicc, Argu);
       } // Prueba de Checksum
       ii = 0;
     } // Cuando el contador llega a 3
@@ -200,8 +204,13 @@ void loop() {
   if (now - lastMsg > 1000) {
     ++Trein;
     if (Trein >= 31) Trein = 0;
+
+    if (Trein == 15) client.publish("Casandra/Cuartos/Modulo/1","on");
+    if (Trein == 16) client.publish("Casandra/Cuartos/Modulo/2","on");
+
     lastMsg = now;
     char buffer[4];
+
     int h = (int) dht.readHumidity();   // Leemos la humedad
     if ((h != h_old) && (h < 100) && (h > 0)) {
       h_old = h;
