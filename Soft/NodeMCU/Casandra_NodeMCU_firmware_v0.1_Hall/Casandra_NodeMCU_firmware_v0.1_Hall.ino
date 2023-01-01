@@ -27,7 +27,7 @@
 #define MSG_BUFFER_SIZE  (50)
 
 const char* MosqID = "Mosquito-HALL";
-const char* mqtt_server = "192.168.0.58";
+const char* mqtt_server = "192.168.0.100";
 String clientId = "Mosquito-HALL";
 const char* Topico = "Casandra/Hall/#"; // Solo subscripto al topico de Caldera con comodin aguas abajo
 unsigned long lastMsg = 0;

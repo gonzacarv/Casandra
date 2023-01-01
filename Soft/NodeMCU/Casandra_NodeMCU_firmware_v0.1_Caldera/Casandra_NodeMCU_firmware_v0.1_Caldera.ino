@@ -33,7 +33,7 @@
 const int oneWireBus = 12;  // D6
 const int analogInPin = A0;
 const char* MosqID = "Mosquito-CALDERA";
-const char* mqtt_server = "192.168.0.58"; 
+const char* mqtt_server = "192.168.0.100"; 
 String clientId = "Mosquito-CALDERA";
 const char* Topico = "Casandra/Caldera/#"; // Solo subscripto al topico de Caldera con comodin aguas abajo
 //int EstadoPIR1 = 15;  // Digital pin D8

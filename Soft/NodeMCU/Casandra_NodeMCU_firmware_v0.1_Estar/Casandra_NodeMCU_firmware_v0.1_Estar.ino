@@ -38,7 +38,7 @@ IRSamsungAc AA(4);     // Set the GPIO used for sending messages.
 IRsend IRTVDeco(IRTele);
 
 const char* MosqID = "Mosquito-ESTAR";
-const char* mqtt_server = "192.168.0.58";
+const char* mqtt_server = "192.168.0.100";
 String clientId = "Mosquito-ESTAR";
 const char* Topico = "Casandra/Estar/#"; // Solo subscripto al topico de Galeria con comodin aguas abajo
 int ii = 0; // Contador de bus

@@ -1,3 +1,4 @@
+Casandra v1.1 - v8.1 (NewServer)
 Casandra v1.0 - v7.1 (BoolDebug)
 Casandra v1.0 - v6 (RGB Add - Botones)    
 Casandra v1.0 - v4 (TreinBuff fix)   

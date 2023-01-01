@@ -30,7 +30,7 @@
 #define MSG_BUFFER_SIZE  (50)
 
 const char* MosqID = "Mosquito-PORTON";
-const char* mqtt_server = "192.168.0.58";
+const char* mqtt_server = "192.168.0.100";
 String clientId = "Mosquito-PORTON";
 const char* Topico = "Casandra/Porton/#"; // Solo subscripto al topico del Porton con comodin aguas abajo
 //int EstadoPuerta = 12;  // Digital pin D6

@@ -28,7 +28,7 @@
 
 bool debu = false;
 const char* MosqID = "Mosquito-GALERIA";
-const char* mqtt_server = "192.168.0.58";
+const char* mqtt_server = "192.168.0.100";
 String clientId = "Mosquito-GALERIA";
 const char* Topico = "Casandra/Galeria/#"; // Solo subscripto al topico de Galeria con comodin aguas abajo
 int ii = 0; // Contador de bus
