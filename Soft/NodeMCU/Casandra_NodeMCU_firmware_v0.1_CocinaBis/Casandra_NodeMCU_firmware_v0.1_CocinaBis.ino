@@ -40,13 +40,13 @@ bool EstadoTeclaLED1;
 bool EstadoTeclaLED2;
 bool LuzEntradaEstado;
 bool LEDMesadaEstado;
-int LEDMesadaIntensidad; 
+float LEDMesadaIntensidad; 
 int LEDMode;
 int VelociLED;
 bool ResetMosq = true;      // True cuando se reinicia el mosquito
 bool ReconectMosq = true;   // True cuando se debe reconectar a MQTT
 bool Ejecutando = false;
-float dimer; // nivel del dimer
+//float dimer; // nivel del dimer
 unsigned long Loop1 = 0;
 unsigned long Loop2 = 0;
 unsigned long Loop3 = 0;
@@ -61,11 +61,14 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 void LEDSet(void){
-    analogWrite(LEDMesada, dimer * LEDMesadaIntensidad);
+    analogWrite(LEDMesada, (int) (255 - LEDMesadaIntensidad));
+    Serial.println("........Estamos en LEDOn con una intensidad de: ");
+    Serial.println((255 - LEDMesadaIntensidad));
 }
 
 void LEDOff(void){
-    analogWrite(LEDMesada, 0);
+    analogWrite(LEDMesada, 255);
+    Serial.println("........Estamos en LEDOff escribiendo un 255 analogico");
 }
 
 void LEDToggle(void){
@@ -102,9 +105,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
     if (atoi(Pload) == 0) {
       LuzEntradaEstado = false;
       digitalWrite(LuzEntrada,LOW);
+          Serial.println("........Se acaba de poner LOW la salida LuzEntrada. ");
+
     } else {
       LuzEntradaEstado = true;
       digitalWrite(LuzEntrada,HIGH);
+          Serial.println("........Se acaba de poner HIGH la salida LuzEntrada. ");
   }
   }
   
@@ -119,7 +125,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   
   if (!strcmp(UlTopic, "LEDMesadaInt")) {
-    dimer = (atof(Pload) / 100);
+    LEDMesadaIntensidad = ((255 * atof(Pload)) / 100);
     if (LEDMesadaEstado) LEDSet();
     else LEDOff();
   }
