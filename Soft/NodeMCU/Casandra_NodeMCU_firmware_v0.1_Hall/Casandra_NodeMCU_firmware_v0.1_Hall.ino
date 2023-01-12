@@ -28,13 +28,21 @@
 
 const char* MosqID = "Mosquito-HALL";
 const char* mqtt_server = "192.168.0.100";
-String clientId = "Mosquito-HALL";
+String clientId;
+String ClienteID = "Mosquito-HALL";
 const char* Topico = "Casandra/Hall/#"; // Solo subscripto al topico de Caldera con comodin aguas abajo
-unsigned long lastMsg = 0;
+unsigned long Loop1 = 0;
+unsigned long Loop2 = 0;
+unsigned long Loop3 = 0;
 char Topicc[MSG_BUFFER_SIZE];
 char Argu[MSG_BUFFER_SIZE];
 int EstadoSirena = 0;
 int Cuenta = 0;
+bool ResetMosq = true;      // True cuando se reinicia el mosquito
+bool ReconectMosq = true;   // True cuando se debe reconectar a MQTT
+bool Ejecutando = false;
+int CuentaErrorMQTT = 0;
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -67,51 +75,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
   if (!strcmp(PenUlTopic, "Hall") && !strcmp(UlTopic, "Sirena")) EstadoSirena = atoi(Pload);
 }
 
-void reconnect() {
-  int Reseteo = 0;
-  // Loopea hasta reconectar
-  while (!client.connected()) {
-    Serial.print("Intentando conectar a broker MQTT..");
-    // Create a random client ID
-    clientId += String(random(0xffff), HEX);
-    // Attempt to connect
-    if (client.connect(clientId.c_str(), "mqttuser", "MQTTpass")) {
-      Serial.println("¡Conectado! :D");
-      client.subscribe(Topico);
-    } else {
-      Serial.print("Falla de conexion, rc=");
-      Serial.print(client.state());
-      Serial.println(" intentando de nuevo en 5 segundos");
-      ++Reseteo;
-      if (Reseteo == 10) ESP.reset();
-      delay(5000);
-    }
-  }
-}
-
-void setup() {
-  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
-  pinMode(Rele1, OUTPUT);
-  pinMode(Sirena, OUTPUT);
-  Serial.begin(2400);
-  WiFiManager wm;
-  wm.setConfigPortalTimeout(180);
-  Serial.begin(2400);
-  //wm.resetSettings();
-
-  bool res;
-  res = wm.autoConnect(MosqID); // password protected ap
-  if (!res) {
-    Serial.println("Error al conectar WiFi");
-    // ESP.restart();
-  }
-  else {
-    //if you get here you have connected to the WiFi
-    Serial.println("Conectado! ");
-  }
-
+void LaOTA(){
+  
   ArduinoOTA.setHostname(MosqID);
-
   ArduinoOTA.onStart([]() {
     String type;
     if (ArduinoOTA.getCommand() == U_FLASH) {
@@ -119,8 +85,6 @@ void setup() {
     } else { // U_FS
       type = "filesystem";
     }
-
-    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
     Serial.println("Start updating " + type);
   });
   ArduinoOTA.onEnd([]() {
@@ -143,6 +107,49 @@ void setup() {
       Serial.println("End Failed");
     }
   });
+}
+
+void MQTTConect(){
+    ReconectMosq = true;
+    Ejecutando = false;
+    if (!client.connected()) {
+    Serial.print("Intentando conectar a broker MQTT..");
+    clientId = ClienteID + String(random(0xffff), HEX);
+    if (client.connect(clientId.c_str(), "mqttuser", "MQTTpass")) {
+      Serial.println("¡Conectado! :D");
+      client.subscribe(Topico);
+    } else {
+      Serial.print("Falla de conexion, rc=");
+      Serial.print(client.state());
+      Serial.println(" intentando de nuevo...");
+      ++CuentaErrorMQTT;
+      if (CuentaErrorMQTT > 100) ESP.reset();
+      }
+      delay(1000);
+    }
+  }
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(Rele1, OUTPUT);
+  pinMode(Sirena, OUTPUT);
+  WiFiManager wifiManager;
+  ResetMosq = true; // Estamos iniciando desde un reset
+  Ejecutando = false;
+  
+  // Descomentar para resetear configuración
+  //wifiManager.resetSettings();
+
+  wifiManager.setConfigPortalTimeout(180);
+  if(!wifiManager.autoConnect("MosqID")){
+    Serial.println("Fallo en la conexión (timeout)");
+    ESP.reset();
+    delay(1000);
+  }
+  Serial.println("Conectado a WiFi");
+  Serial.println("IP: ");
+  Serial.println(WiFi.localIP());
+  LaOTA();
   ArduinoOTA.begin();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
@@ -151,18 +158,36 @@ void setup() {
   EstadoSirena = 0;
 }
 
-void loop() {
-  ArduinoOTA.handle();
-  if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
 
-  unsigned long now = millis(); // ciclado cada 30 segundos
-  if (now - lastMsg > 500) {
-    lastMsg = now;
-    Cuenta = Cuenta + 1;
-    if (Cuenta == 4) Cuenta = 0;
+void loop() {
+
+ArduinoOTA.handle();
+client.loop();
+unsigned long now = millis(); 
+
+if (now - Loop1 > 5000) {
+    if (!client.loop()) MQTTConect();
+    if (!(ReconectMosq) && !(ResetMosq) && !(Ejecutando)){
+      client.publish("Casandra/Hall/Mosquito","Ejecutando");
+      Ejecutando = true;
+    }
+
+    if (ResetMosq) {
+      ResetMosq = false;
+      client.publish("Casandra/Hall/Mosquito","Reset");
+    } else {
+      if (ReconectMosq) {
+        ReconectMosq = false;
+        client.publish("Casandra/Hall/Mosquito","Reconect");
+     }
+    }
+    Loop1 = now;
+}
+
+if (now - Loop2 > 500) { // Cada un segundo
+  Cuenta = Cuenta + 1;
+  if (Cuenta == 4) Cuenta = 0;
+
     switch (EstadoSirena) {
       case 0:
         digitalWrite(Sirena, LOW);
@@ -196,7 +221,7 @@ void loop() {
         digitalWrite(Sirena, LOW);
         break;
     }
-
+    Loop2 = now;
   } // Loop cada 500 milisegundos
 
   //Bloque de loop sin espera

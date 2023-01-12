@@ -13,7 +13,6 @@
 ||                                                                                                      ||
 =========================================================================================================*/
 
-#include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <PubSubClient.h>
@@ -21,47 +20,66 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <string>
-#include <OneWire.h>
-#include <DallasTemperature.h>
 
-#define Rele1 0         // Rele1 D3
-#define Rele2 2         // Rele2 D4
-//#define Rele3 5         // Rele3 D1
-#define Lluvia 13       // Lluvia D7
-#define Termostato 14   // Termostato D5
+#define LuzEntrada 5         // Rele de la luz de entrada D1 --
+#define LEDMesada 4          // Salida PWM para LED D2 --
+//#define TeclaEntrada 12      // SW de la luz de entrada D6 
+#define TeclaLED1 14          // SW LED1 D5 
+#define TeclaLED2 13         // SW LED2 D6
+#define TeclaPorton 12       // Pulsador porton D7
 #define MSG_BUFFER_SIZE  (50)
 
-const int oneWireBus = 12;  // D6
-const int analogInPin = A0;
-const char* MosqID = "Mosquito-CALDERA";
+const char* MosqID = "Mosquito-COCINABIS";
 const char* mqtt_server = "192.168.0.100"; 
+String ClienteID = "Mosquito-COCINABIS";
 String clientId;
-String ClienteID = "Mosquito-CALDERA";
-const char* Topico = "Casandra/Caldera/#"; // Solo subscripto al topico de Caldera con comodin aguas abajo
-//int EstadoPIR1 = 15;  // Digital pin D8
-//int Lluvia = 13;  // Digital pin D7
-int LuzIntens = 0; 
-int TempC_old = 0;
-int Luz_old = 0;
-//int EstadoPIR2 = 13;  // Digital pin D7
-//bool EstadoPIR1_old = false;
-bool Lluvia_old = false;
-//bool EstadoPIR2_old = false;
-unsigned long Loop1 = 0;
-unsigned long Loop2 = 0;
-unsigned long Loop3 = 0;
-char Topicc[MSG_BUFFER_SIZE];
-char Argu[MSG_BUFFER_SIZE];
-int Cuenta = 0;
+const char* Topico = "Casandra/CocinaBis/#"; // Solo subscripto al topico de Caldera con comodin aguas abajo
+
+bool EstadoTeclaPorton;
+bool EstadoTeclaLED1;
+bool EstadoTeclaLED2;
+bool LuzEntradaEstado;
+bool LEDMesadaEstado;
+int LEDMesadaIntensidad; 
+int LEDMode;
+int VelociLED;
 bool ResetMosq = true;      // True cuando se reinicia el mosquito
 bool ReconectMosq = true;   // True cuando se debe reconectar a MQTT
 bool Ejecutando = false;
-int CuentaErrorMQTT = 0;
+float dimer; // nivel del dimer
+unsigned long Loop1 = 0;
+unsigned long Loop2 = 0;
+unsigned long Loop3 = 0;
 
+int testeo = 0;
+
+char Topicc[MSG_BUFFER_SIZE];
+char Argu[MSG_BUFFER_SIZE];
+
+char buffer[4];
 WiFiClient espClient;
 PubSubClient client(espClient);
-OneWire oneWire(oneWireBus);
-DallasTemperature SensTemp(&oneWire);
+
+void LEDSet(void){
+    analogWrite(LEDMesada, dimer * LEDMesadaIntensidad);
+}
+
+void LEDOff(void){
+    analogWrite(LEDMesada, 0);
+}
+
+void LEDToggle(void){
+    if (LEDMesadaEstado) { 
+      LEDMesadaEstado = false; 
+      LEDOff(); 
+      client.publish("Casandra/CocinaBis/LEDMesadaEst","0");
+      }
+    if (!LEDMesadaEstado) {
+      LEDMesadaEstado = true;
+      LEDSet();
+      client.publish("Casandra/CocinaBis/LEDMesadaEst","1");
+      }
+    }
 
 void callback(char* topic, byte* payload, unsigned int length) {
   const char s[2] = "/";
@@ -79,30 +97,42 @@ void callback(char* topic, byte* payload, unsigned int length) {
     UlTopic = Fin;
     Fin = strtok(NULL, s);
   }
-  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 0)) {
-    switch(atoi(UlTopic)) {
-      case 1: digitalWrite(Rele1,HIGH); 
-      break;
-      case 2: digitalWrite(Rele2,HIGH); 
-      break;
-//      case 3: digitalWrite(Rele3,HIGH); 
-//      break;
-    }
-  }
-  if (!strcmp(PenUlTopic, "LuzEstado") && (atoi(Pload) == 1)) {
-    switch(atoi(UlTopic)) {
-      case 1: digitalWrite(Rele1,LOW); 
-      break;
-      case 2: digitalWrite(Rele2,LOW); 
-//      break;
-//      case 3: digitalWrite(Rele3,LOW); 
-//      break;
-    }
-  }
 
-  if ( (!strcmp(PenUlTopic, "Caldera")) && (!strcmp(UlTopic, "Termostato")) && (atoi(Pload) == 1)) digitalWrite(Termostato,LOW); 
-  if ( (!strcmp(PenUlTopic, "Caldera")) && (!strcmp(UlTopic, "Termostato")) && (atoi(Pload) == 0)) digitalWrite(Termostato,HIGH); 
-
+  if (!strcmp(UlTopic, "LuzEntrada")) {
+    if (atoi(Pload) == 0) {
+      LuzEntradaEstado = false;
+      digitalWrite(LuzEntrada,LOW);
+    } else {
+      LuzEntradaEstado = true;
+      digitalWrite(LuzEntrada,HIGH);
+  }
+  }
+  
+  if (!strcmp(UlTopic, "LEDMesadaEst")) {
+    if (atoi(Pload) == 0) {
+      LEDMesadaEstado = false;
+      LEDOff();
+    } else {
+     LEDMesadaEstado = true;
+     LEDSet();
+  }
+  }
+  
+  if (!strcmp(UlTopic, "LEDMesadaInt")) {
+    dimer = (atof(Pload) / 100);
+    if (LEDMesadaEstado) LEDSet();
+    else LEDOff();
+  }
+  
+  if (!strcmp(UlTopic, "ModoLED")) {
+    if (!strcmp(Pload, "Normal"))  LEDMode = 1;
+    if (!strcmp(Pload, "Respira")) LEDMode = 2;
+    if (!strcmp(Pload, "Flash"))   LEDMode = 3;
+  }
+  
+  if (!strcmp(UlTopic, "VelocidadLED")) {
+    VelociLED = atoi(Pload);
+  }
 }
 
 void LaOTA(){
@@ -152,8 +182,6 @@ void MQTTConect(){
       Serial.print("Falla de conexion, rc=");
       Serial.print(client.state());
       Serial.println(" intentando de nuevo...");
-      ++CuentaErrorMQTT;
-      if (CuentaErrorMQTT > 100) ESP.reset();
       }
       delay(1000);
     }
@@ -161,19 +189,20 @@ void MQTTConect(){
 
 void setup() {
   Serial.begin(9600);
-  pinMode(Lluvia, INPUT);
-  pinMode(Rele1, OUTPUT);
-  pinMode(Rele2, OUTPUT);
-  pinMode(Termostato, OUTPUT);
+  pinMode(LuzEntrada, OUTPUT);
+  pinMode(LEDMesada, OUTPUT);
+  pinMode(TeclaLED1, INPUT);
+  pinMode(TeclaLED1, INPUT);
+  pinMode(TeclaPorton, INPUT);
   WiFiManager wifiManager;
   ResetMosq = true; // Estamos iniciando desde un reset
   Ejecutando = false;
-  
+
   // Descomentar para resetear configuración
   //wifiManager.resetSettings();
 
   wifiManager.setConfigPortalTimeout(180);
-  if(!wifiManager.autoConnect("MosqID")){
+  if(!wifiManager.autoConnect(MosqID)){
     Serial.println("Fallo en la conexión (timeout)");
     ESP.reset();
     delay(1000);
@@ -185,9 +214,7 @@ void setup() {
   ArduinoOTA.begin();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
-  digitalWrite(Termostato,HIGH);
-  digitalWrite(Rele1,HIGH);
-  digitalWrite(Rele2,HIGH);
+  LuzEntradaEstado = false;
 }
 
 void loop() {
@@ -196,60 +223,48 @@ ArduinoOTA.handle();
 client.loop();
 unsigned long now = millis(); 
 
-  if (now - Loop1 > 1000) {
-    if (!client.loop()) MQTTConect();
-    ++Cuenta;
-    if (Cuenta > 30) Cuenta = 0;
-    char buffer[4];
-    SensTemp.requestTemperatures(); 
-    int TempC = (int) SensTemp.getTempCByIndex(0);
-    if (TempC != TempC_old){
-      TempC_old = TempC;
-      if (TempC < 100) sprintf(buffer, "%d", TempC);
-      client.publish("Casandra/Caldera/Temperatura", buffer);
-    }
-    if (Cuenta == 5) {
-      sprintf(buffer, "%d", TempC_old);
-      client.publish("Casandra/Caldera/Temperatura", buffer);
-    }
-
-    float LuzTemporal; 
-    LuzIntens = analogRead(analogInPin);
-    if (LuzIntens < 100) LuzTemporal = (LuzIntens * 0.333);
-    if (LuzIntens >= 100) LuzTemporal = ((LuzIntens * 0.026) + 31);
-    if (LuzIntens >= 700) LuzTemporal = ((LuzIntens * 0.157) - 60);
-    if (((int) LuzTemporal) > 100) LuzTemporal =  100;
-    sprintf(buffer, "%d", (int) LuzTemporal);  // Numero procesado
-//    sprintf(buffer, "%d", (int) LuzIntens);  // Numero puro
-    if (Cuenta == 20) client.publish("Casandra/Caldera/LuzSolar", buffer);
-
-    if (Cuenta == 12) {
-    if (digitalRead(Lluvia) != Lluvia_old){ //Son distintos, guardamos el nuevo en el viejo
-      Lluvia_old = digitalRead(Lluvia);
-      if (Lluvia_old) client.publish("Casandra/Caldera/Lluvia", "0");
-      else client.publish("Casandra/Caldera/Lluvia", "1");
-    }
-    }
+  if (now - Loop1 > 5000) { // 5 segundos
     Loop1 = now;
-  } // Loop cada 10 segundos
-
-if (now - Loop2 > 5000) {
     if (!(ReconectMosq) && !(ResetMosq) && !(Ejecutando)){
-      client.publish("Casandra/Caldera/Mosquito","Ejecutando");
+      client.publish("Casandra/CocinaBis/Mosquito","Ejecutando");
       Ejecutando = true;
     }
 
     if (ResetMosq) {
       ResetMosq = false;
-      client.publish("Casandra/Caldera/Mosquito","Reset");
+      client.publish("Casandra/CocinaBis/Mosquito","Reset");
     } else {
       if (ReconectMosq) {
         ReconectMosq = false;
-        client.publish("Casandra/Caldera/Mosquito","Reconect");
+        client.publish("Casandra/CocinaBis/Mosquito","Reconect");
      }
     }
+  }
+
+  if (now - Loop2 > 1000) {
     Loop2 = now;
-}
+    if (!client.loop()) MQTTConect();
+  }
+
+  if (now - Loop3 > 50) {
+    Loop3 = now;
+    if (digitalRead(TeclaPorton)!= EstadoTeclaPorton) {
+      if (digitalRead(TeclaPorton)) client.publish("Casandra/CocinaBis/SWPorton","1");
+      else client.publish("Casandra/CocinaBis/SWPorton","0");
+      EstadoTeclaPorton = digitalRead(TeclaPorton);
+    }
+
+    if (digitalRead(TeclaLED1)!= EstadoTeclaLED1) {
+      LEDToggle();
+      EstadoTeclaLED1 = digitalRead(TeclaLED1);
+    }
+
+    if (digitalRead(TeclaLED2)!= EstadoTeclaLED2) {
+      LEDToggle();
+      EstadoTeclaLED2 = digitalRead(TeclaLED2);
+    }
+  }
+
 
 //Bloque de loop sin espera
 

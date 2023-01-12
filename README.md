@@ -1,3 +1,4 @@
+Casandra v1.3 - v8.2 (CocinaBis + Huerta v2)
 Casandra v1.1 - v8.1 (NewServer)
 Casandra v1.0 - v7.1 (BoolDebug)
 Casandra v1.0 - v6 (RGB Add - Botones)    

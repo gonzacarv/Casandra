@@ -13,6 +13,7 @@
   ||                                                                                                      ||
   =========================================================================================================*/
 
+#include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <PubSubClient.h>
@@ -31,7 +32,8 @@
 
 const char* MosqID = "Mosquito-PORTON";
 const char* mqtt_server = "192.168.0.100";
-String clientId = "Mosquito-PORTON";
+String clientId;
+String ClienteID = "Mosquito-PORTON";
 const char* Topico = "Casandra/Porton/#"; // Solo subscripto al topico del Porton con comodin aguas abajo
 //int EstadoPuerta = 12;  // Digital pin D6
 //int EstadoPorton = 13;  // Digital pin D7
@@ -39,10 +41,16 @@ const char* Topico = "Casandra/Porton/#"; // Solo subscripto al topico del Porto
 bool EstadoPuerta_old = false;
 bool EstadoPorton_old = false;
 bool EstadoTimbre_old = false;
-unsigned long lastMsg = 0;
+unsigned long Loop1 = 0;
+unsigned long Loop2 = 0;
+unsigned long Loop3 = 0;
 int Tim = 0;
 char Topicc[MSG_BUFFER_SIZE];
 char Argu[MSG_BUFFER_SIZE];
+bool ResetMosq = true;      // True cuando se reinicia el mosquito
+bool ReconectMosq = true;   // True cuando se debe reconectar a MQTT
+bool Ejecutando = false;
+int CuentaErrorMQTT = 0;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -82,55 +90,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
   if ( (!strcmp(PenUlTopic, "Porton")) && (!strcmp(UlTopic, "LuzCamino")) && (atoi(Pload) == 0) ) {
     digitalWrite(LuzCamino, LOW);
   }
-
 }
 
-void reconnect() {
-  int Reseteo = 0;
-  // Loopea hasta reconectar
-  while (!client.connected()) {
-    Serial.print("Intentando conectar a broker MQTT..");
-    // Create a random client ID
-    clientId += String(random(0xffff), HEX);
-    // Attempt to connect
-    if (client.connect(clientId.c_str(), "mqttuser", "MQTTpass")) {
-      Serial.println("¡Conectado! :D");
-      client.subscribe(Topico);
-    } else {
-      Serial.print("Falla de conexion, rc=");
-      Serial.print(client.state());
-      Serial.println(" intentando de nuevo en 5 segundos");
-      ++Reseteo;
-      if (Reseteo == 10) ESP.reset();
-      delay(5000);
-    }
-  }
-}
-
-void setup() {
-  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
-  pinMode(Timbre, INPUT);
-  pinMode(SensPuerta, INPUT);
-  pinMode(SensPorton, INPUT);
-  pinMode(SwAbrir, OUTPUT);
-  pinMode(SwCerrar, OUTPUT);
-  pinMode(LuzCamino, OUTPUT);
-  WiFiManager wm;
-  wm.setConfigPortalTimeout(180);
-  Serial.begin(2400);
-  //wm.resetSettings();
-
-  bool res;
-  res = wm.autoConnect(MosqID); // password protected ap
-  if (!res) {
-    Serial.println("Error al conectar WiFi");
-    // ESP.restart();
-  }
-  else {
-    //if you get here you have connected to the WiFi
-    Serial.println("Conectado! ");
-  }
-
+void LaOTA(){
+  
   ArduinoOTA.setHostname(MosqID);
   ArduinoOTA.onStart([]() {
     String type;
@@ -139,8 +102,6 @@ void setup() {
     } else { // U_FS
       type = "filesystem";
     }
-
-    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
     Serial.println("Start updating " + type);
   });
   ArduinoOTA.onEnd([]() {
@@ -163,6 +124,54 @@ void setup() {
       Serial.println("End Failed");
     }
   });
+}
+
+void MQTTConect(){
+    ReconectMosq = true;
+    Ejecutando = false;
+    if (!client.connected()) {
+    Serial.print("Intentando conectar a broker MQTT..");
+    clientId = ClienteID + String(random(0xffff), HEX);
+    if (client.connect(clientId.c_str(), "mqttuser", "MQTTpass")) {
+      Serial.println("¡Conectado! :D");
+      client.subscribe(Topico);
+    } else {
+      Serial.print("Falla de conexion, rc=");
+      Serial.print(client.state());
+      Serial.println(" intentando de nuevo...");
+      ++CuentaErrorMQTT;
+      if (CuentaErrorMQTT > 100) ESP.reset();
+      }
+      delay(1000);
+    }
+  }
+
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(Timbre, INPUT);
+  pinMode(SensPuerta, INPUT);
+  pinMode(SensPorton, INPUT);
+  pinMode(SwAbrir, OUTPUT);
+  pinMode(SwCerrar, OUTPUT);
+  pinMode(LuzCamino, OUTPUT);
+  WiFiManager wifiManager;
+  ResetMosq = true; // Estamos iniciando desde un reset
+  Ejecutando = false;
+  
+  // Descomentar para resetear configuración
+  //wifiManager.resetSettings();
+
+  wifiManager.setConfigPortalTimeout(180);
+  if(!wifiManager.autoConnect("MosqID")){
+    Serial.println("Fallo en la conexión (timeout)");
+    ESP.reset();
+    delay(1000);
+  }
+  Serial.println("Conectado a WiFi");
+  Serial.println("IP: ");
+  Serial.println(WiFi.localIP());
+  LaOTA();
   ArduinoOTA.begin();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
@@ -172,19 +181,16 @@ void setup() {
 }
 
 void loop() {
-  ArduinoOTA.handle();
-  if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
 
-  unsigned long now = millis(); // ciclado cada 1 segundo
+ArduinoOTA.handle();
+client.loop();
+unsigned long now = millis(); 
   
-  if (now - lastMsg > 500) {
+  if (now - Loop1 > 100) {
 
     if (Tim == 0) {
       if (digitalRead(Timbre) != EstadoTimbre_old) { //Son distintos, guardamos el nuevo en el viejo
-        Tim = 5; // Esperamos 2 segundos y medio
+        Tim = 25; // Esperamos 2 segundos y medio
         EstadoTimbre_old = digitalRead(Timbre);
         if (EstadoTimbre_old) client.publish("Casandra/Porton/Timbre", "1");
         else client.publish("Casandra/Porton/Timbre", "0");
@@ -202,8 +208,27 @@ void loop() {
       if (EstadoPorton_old) client.publish("Casandra/Porton/SensorPorton", "0");
       else client.publish("Casandra/Porton/SensorPorton", "1");
     }
+    Loop1 = now;
+  } // Loop cada 100 milisegundos
 
-  } // Loop cada 1 segundo
+if (now - Loop2 > 5000) {
+    if (!client.loop()) MQTTConect();
+    if (!(ReconectMosq) && !(ResetMosq) && !(Ejecutando)){
+      client.publish("Casandra/Porton/Mosquito","Ejecutando");
+      Ejecutando = true;
+    }
+
+    if (ResetMosq) {
+      ResetMosq = false;
+      client.publish("Casandra/Porton/Mosquito","Reset");
+    } else {
+      if (ReconectMosq) {
+        ReconectMosq = false;
+        client.publish("Casandra/Porton/Mosquito","Reconect");
+     }
+    }
+    Loop2 = now;
+}
 
   //Bloque de loop sin espera
 

@@ -28,7 +28,8 @@
 bool debu = false;
 const char* MosqID = "Mosquito-CUARTOS";
 const char* mqtt_server = "192.168.0.100";
-String clientId = "Mosquito-CUARTOS";
+String ClienteID = "Mosquito-CUARTOS";
+String clientId;
 const char* Topico = "Casandra/Cuartos/#"; // Solo subscripto al topico de cuartos con comodin aguas abajo
 int ii = 0; // Contador de bus
 int buff[3]; // Lo que llega
@@ -38,6 +39,10 @@ int EstadoPIR1 = 12;  // Digital pin D6
 int EstadoPIR2 = 13;  // Digital pin D7
 bool EstadoPIR1_old = false;
 bool EstadoPIR2_old = false;
+bool ResetMosq = true;      // True cuando se reinicia el mosquito
+bool ReconectMosq = true;   // True cuando se debe reconectar a MQTT
+bool ResetModulo1;          // True cuando se resetea el modulo PIC
+bool ResetModulo2;          // True cuando se resetea el modulo PIC
 unsigned long lastMsg = 0;
 int Trein = 0;
 char Topicc[MSG_BUFFER_SIZE];
@@ -78,19 +83,23 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 /////////////////////////// Funcion que habla en el bus ////////////////////////////////////////
 void Hablador(int x, int y) { // La funcion encargada de hablar en el bus
+if (!ReconectMosq){
   Serial.write(250);
   Serial.write(x);
   Serial.write(y);
   Serial.write(x + y);
   delay(25);
 }
+}
+
 void reconnect() {
+  ReconectMosq = true;
   int Reseteo = 0;
   // Loopea hasta reconectar
   while (!client.connected()) {
     if (debu) Serial.print("Intentando conectar a broker MQTT..");
     // Create a random client ID
-    clientId += String(random(0xffff), HEX);
+    clientId = ClienteID + String(random(0xffff), HEX);
     // Attempt to connect
     if (client.connect(clientId.c_str(), "mqttuser", "MQTTpass")) {
       if (debu) Serial.println("¡Conectado! :D");
@@ -100,19 +109,26 @@ void reconnect() {
       if (debu) Serial.print(client.state());
       if (debu) Serial.println(" intentando de nuevo en 5 segundos");
       ++Reseteo;
-      if (Reseteo == 60) ESP.reset();
+      if (Reseteo == 60) {
+        if (debu) Serial.println("=== Reset fisico por no poder reconectar ===");
+        ESP.reset();
+      }
       delay(5000);
     }
   }
 }
 
 void setup() {
+  Serial.begin(2400);
+  ResetMosq = true; // Estamos iniciando desde un reset
   WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
+//  WiFi.setPhyMode(WIFI_PHY_MODE_11B); // Mas confiable, mas consumo, mas lento
+  WiFi.setPhyMode(WIFI_PHY_MODE_11G);
+//  WiFi.setPhyMode(WIFI_PHY_MODE_11N); // Menos confiable, menos consumo, mas rapido
   pinMode(EstadoPIR1, INPUT);
   pinMode(EstadoPIR2, INPUT);
   WiFiManager wm;
   wm.setConfigPortalTimeout(180);
-  Serial.begin(2400);
   //wm.resetSettings();
   dht.begin();
   delay(10);
@@ -167,12 +183,33 @@ void setup() {
 
 void loop() {
   ArduinoOTA.handle();
+  
   if (!client.connected()) {
+
+  while (Serial.available() > 0) {
+    buff[ii] = Serial.read();
+    if (buff[ii] == 250) ii = 0;
+    else ++ii;
+    if (ii == 3) {
+      if (( (buff[0]) + (buff[1]) ) == buff[2]) { // Prueba de checksum
+        if (buff[0] == 184) {
+          if (buff[1] == 49) {
+            ResetModulo1 = true;
+            //client.publish("Casandra/Cuartos/Modulo/1","off");
+          }
+          if (buff[1] == 50) {
+            ResetModulo2 = true;
+            //client.publish("Casandra/Cuartos/Modulo/2","off");
+          }
+        } 
+      } // Prueba de Checksum
+      ii = 0;
+    } // Cuando el contador llega a 3
+  } // Cuando llego algo al buffer
     reconnect();
   }
   client.loop();
 
-  /////////////////////////////////////////////// Recepcion de datos y actualizacion MQTT //////////////////////////////
   if (Serial.available() > 0) {
 
     buff[ii] = Serial.read();
@@ -192,8 +229,8 @@ void loop() {
           snprintf (Argu, MSG_BUFFER_SIZE, "%d", Payl);
         }
         if (buff[0] == 184) {
-          if (buff[1] == 49) client.publish("Casandra/Cuartos/Modulo/1","off");
-          if (buff[1] == 50) client.publish("Casandra/Cuartos/Modulo/2","off");
+          if (buff[1] == 49) ResetModulo1 = true;
+          if (buff[1] == 50) ResetModulo2 = true;
         } else client.publish(Topicc, Argu);
       } // Prueba de Checksum
       ii = 0;
@@ -205,8 +242,40 @@ void loop() {
     ++Trein;
     if (Trein >= 31) Trein = 0;
 
-    if (Trein == 15) client.publish("Casandra/Cuartos/Modulo/1","on");
-    if (Trein == 16) client.publish("Casandra/Cuartos/Modulo/2","on");
+    if (Trein == 15) {
+      if (ResetModulo1) {
+        ResetModulo1 = false;
+        client.publish("Casandra/Cuartos/Modulo/1","off");
+      }
+      else client.publish("Casandra/Cuartos/Modulo/1","on");
+    }
+    if (Trein == 16) {
+     if (ResetModulo2) {
+      ResetModulo2 = false;
+      client.publish("Casandra/Cuartos/Modulo/2","off");
+     }
+      else client.publish("Casandra/Cuartos/Modulo/2","on");
+    }
+
+    if (Trein == 5) {
+     if (ResetMosq) {
+      ResetMosq = false;
+      client.publish("Casandra/Cuartos/Mosquito","Reset");
+     }
+    }
+
+    if (Trein == 10) {
+     if (ReconectMosq) {
+      ReconectMosq = false;
+      client.publish("Casandra/Cuartos/Mosquito","Reconect");
+     }
+    }
+
+    if (Trein == 27) {
+     if (!(ReconectMosq) && !(ResetMosq)){
+      client.publish("Casandra/Cuartos/Mosquito","Ejecutando");
+     }
+    }
 
     lastMsg = now;
     char buffer[4];

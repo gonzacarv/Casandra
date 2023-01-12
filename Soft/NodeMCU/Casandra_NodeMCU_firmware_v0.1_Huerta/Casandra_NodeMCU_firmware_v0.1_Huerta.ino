@@ -13,6 +13,7 @@
   ||                                                                                                      ||
   =========================================================================================================*/
 
+#include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <PubSubClient.h>
@@ -21,25 +22,40 @@
 #include <ArduinoOTA.h>
 #include <string>
 
-#define Bomba D5       // Salida relé de la bomba   D5
+#define Bomba 14 // Salida relé de la bomba   D5
 //#define DHTPIN D3   // DHT22
 #define MSG_BUFFER_SIZE  (50)
 
 const char* MosqID = "Mosquito-HUERTA";
-const char* mqtt_server = "192.168.0.58";
-String clientId = "Mosquito-HUERTA";
+const char* mqtt_server = "192.168.0.100";
+const int analogInPin = A0;
+String clientId;
+String ClienteID = "Mosquito-HUERTA";
 const char* Topico = "Casandra/Huerta/#"; // Solo subscripto al topico de Galeria con comodin aguas abajo
 int ii = 0; // Contador de bus
 int buff[3]; // Lo que llega
 int MQTTOn;
 int MQTTOff;
 int SegOn;
+int AutoSegOn;
 int SegOff;
+int MinOff;
+int AguaIntens = 0; 
 bool Estado;
-unsigned long lastMsg = 0;
-int Trein = 0;
+bool EstadoPpal;
+bool HayAgua = false;
+int EstadoNum;
+int MaxBbaOn = 60; // Maxima cantidad de segundos que puede andar la bomba
+unsigned long CadaMil = 0;
+unsigned long CadaDosc = 0;
+unsigned long CadaCinco = 0;
+bool ResetMosq = true;      // True cuando se reinicia el mosquito
+bool ReconectMosq = true;   // True cuando se debe reconectar a MQTT
+bool Ejecutando = false;
+int CuentaErrorMQTT = 0;
 char Topicc[MSG_BUFFER_SIZE];
 char Argu[MSG_BUFFER_SIZE];
+char buffer[4];
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -61,51 +77,59 @@ void callback(char* topic, byte* payload, unsigned int length) { // Funcion de l
   }
 
   if ( (!strcmp(PenUlTopic, "Huerta")) && (!strcmp(UlTopic, "On")) ) MQTTOn = atof(Pload);
+  //if (!strcmp(UlTopic, "On")) { Serial.println("    ..Acaba de llegar un ON  = "); Serial.print(MQTTOn);}
   if ( (!strcmp(PenUlTopic, "Huerta")) && (!strcmp(UlTopic, "Off")) ) MQTTOff = atof(Pload);
-  SegOn = MQTTOn;
-  SegOff = MQTTOff;
-  }
+  //if (!strcmp(UlTopic, "Off")){ Serial.println("    ..Acaba de llegar un OFF  = "); Serial.print(MQTTOff);}
+  //Serial.println("    ..La suma de ambas es  = "); Serial.print(MQTTOn+MQTTOff);
 
-void reconnect() {
-  int Reseteo = 0;
-  // Loopea hasta reconectar
-  while (!client.connected()) {
-    Serial.print("Intentando conectar a broker MQTT..");
-    // Create a random client ID
-    clientId += String(random(0xffff), HEX);
-    // Attempt to connect
-    if (client.connect(clientId.c_str(), "mqttuser", "MQTTpass")) {
-      Serial.println("¡Conectado! :D");
-      client.subscribe(Topico);
-    } else {
-      Serial.print("Falla de conexion, rc=");
-      Serial.print(client.state());
-      Serial.println(" intentando de nuevo en 5 segundos");
-      ++Reseteo;
-      if (Reseteo == 10) ESP.reset();
-      delay(5000);
-    }
+if (!strcmp(UlTopic, "On")){
+if (MQTTOn > 0) {
+  if (MQTTOn > 1000) ;
+  else { 
+  if (MQTTOn > MaxBbaOn) {
+    MQTTOn = MaxBbaOn;
+    SegOn = MQTTOn;
   }
+  else SegOn = MQTTOn;
+  Estado = true;
+  Serial.println("       ...Llego un MQTT On positivo, lo pasamos a SegOn que valdrá: ");
+  Serial.print(SegOn);
+  }
+} else { 
+  MQTTOn = 0;
+  Estado = false;
+//  Serial.println("       ...Apagada por 0 on ");
+}
 }
 
-void setup() {
-  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
-  Serial.begin(9600);
-  WiFiManager wm;
-  wm.setConfigPortalTimeout(180);
-  //wm.resetSettings();
-    bool res;
-    res = wm.autoConnect(MosqID); // password protected ap
-    if(!res) {
-        Serial.println("Error al conectar WiFi");
-        // ESP.restart();
-    } 
-    else {
-        //if you get here you have connected to the WiFi    
-        Serial.println("Conectado! ");
-    }
+if (!strcmp(UlTopic, "Off")){
+if (MQTTOff > 0) {
+  SegOff = MQTTOff;
+  MinOff = ((MQTTOff)*60);
+  Serial.println("       ...Llego un MQTT Off positivo, lo pasamos a SegOff que valdrá: ");
+  Serial.print(MinOff);
+} else {
+  MQTTOff = 0;
+//  Serial.println("       ...Siempre prendida por 0 off ");
+}
+}
 
-   ArduinoOTA.setHostname(MosqID);
+  if ( (!strcmp(PenUlTopic, "Huerta")) && (!strcmp(UlTopic, "BbaEstado")) ) {
+    EstadoNum = atof(Pload);
+    if (EstadoNum > 0) {
+      EstadoPpal = true;
+      //Serial.println("Prendida por Sw");
+      }
+  else {
+    EstadoPpal = false;
+    //Serial.println("Apagada por Sw");
+    }
+    }
+}
+
+void LaOTA(){
+  
+  ArduinoOTA.setHostname(MosqID);
   ArduinoOTA.onStart([]() {
     String type;
     if (ArduinoOTA.getCommand() == U_FLASH) {
@@ -113,8 +137,6 @@ void setup() {
     } else { // U_FS
       type = "filesystem";
     }
-
-    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
     Serial.println("Start updating " + type);
   });
   ArduinoOTA.onEnd([]() {
@@ -137,61 +159,154 @@ void setup() {
       Serial.println("End Failed");
     }
   });
+}
+
+void MQTTConect(){
+    ReconectMosq = true;
+    Ejecutando = false;
+    if (!client.connected()) {
+    Serial.print("Intentando conectar a broker MQTT..");
+    clientId = ClienteID + String(random(0xffff), HEX);
+    if (client.connect(clientId.c_str(), "mqttuser", "MQTTpass")) {
+      Serial.println("¡Conectado! :D");
+      client.subscribe(Topico);
+    } else {
+      Serial.print("Falla de conexion, rc=");
+      Serial.print(client.state());
+      Serial.println(" intentando de nuevo...");
+      ++CuentaErrorMQTT;
+      if (CuentaErrorMQTT > 100) ESP.reset();
+      }
+      delay(1000);
+    }
+  }
+
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(Bomba, OUTPUT);
+  WiFiManager wifiManager;
+  ResetMosq = true; // Estamos iniciando desde un reset
+  Ejecutando = false;
+  
+  // Descomentar para resetear configuración
+  //wifiManager.resetSettings();
+
+  wifiManager.setConfigPortalTimeout(180);
+  if(!wifiManager.autoConnect("MosqID")){
+    Serial.println("Fallo en la conexión (timeout)");
+    ESP.reset();
+    delay(1000);
+  }
+  Serial.println("Conectado a WiFi");
+  Serial.println("IP: ");
+  Serial.println(WiFi.localIP());
+  LaOTA();
   ArduinoOTA.begin();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
-
-if (MQTTOn > 0) {
-  SegOn = MQTTOn;
-  Estado = true;
-} else {
-  MQTTOn = 0;
-  Estado = false;
-}
-
-if (MQTTOff > 0) {
-  SegOff = MQTTOff;
-} else {
-  MQTTOff = 0;
-}
-
-}
+  EstadoPpal = true;
+  AutoSegOn = 0;
+} //setup()
 
 void loop() {
-  ArduinoOTA.handle();
-  if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
 
-  unsigned long now = millis(); // ciclado cada 30 segundos
-  if (now - lastMsg > 1000) {
+ArduinoOTA.handle();
+client.loop();
+unsigned long now = millis(); 
 
-    if (Estado){ // Estado es verdadero: On
-      if (SegOn > 0) {
+if (now - CadaMil > 1000) {  // ciclado cada 1 segundos
+
+    if (!client.loop()) MQTTConect();
+
+    if (Estado){ /////// Estado es verdadero: On
+
+      if ((SegOn) > 999) {
+        ++AutoSegOn;
+        Serial.println("       ...Valor mayor o igual a mil... AutoSegon vale: ");
+        Serial.print(AutoSegOn);
+      } else {
+      if ((SegOn-1) > 0) {
         --SegOn;
       } else {
         if (MQTTOff > 0) Estado = false;
         SegOn = MQTTOn;
       }
-      
-    } else { // Estado es falso: Off
-      if (SegOff > 0) {
-        --SegOff;
+      } // else de segon menor a 1000
+
+
+    } ///////////////////// Estado es verdadero
+
+    if (!Estado){ // Estado es Falso: Off
+      if (MinOff > 0) {
+        --MinOff;
       } else {
         if (MQTTOn > 0) Estado = true;
-        SegOff = MQTTOff;
+        MinOff = ((MQTTOff)*60);
       }
     }
 
-    lastMsg = now;
-    if (Estado) digitalWrite(Bomba,LOW);//Encendemos la bajoactiva
-    else digitalWrite(Bomba,HIGH);//Apagamos la bajoactiva
+  if (EstadoPpal){
+    if (Estado) {
+      digitalWrite(Bomba,LOW);
+      client.publish("Casandra/Huerta/Bomba","on");
+//      Serial.println("    ..Escrita salida LOW");
+      }
+    else {
+      digitalWrite(Bomba,HIGH);
+      client.publish("Casandra/Huerta/Bomba","off");
+//      Serial.println("    ..Escrita salida HIGH");
+      }
+  } else {
+    digitalWrite(Bomba,HIGH);
+    client.publish("Casandra/Huerta/Bomba","off");
+  }
+  CadaMil = now;
+ } // Loop cada 1 segundo
 
+if (now - CadaDosc > 200) {
+float AguaTemporal; 
+AguaIntens = analogRead(analogInPin);
+sprintf(buffer, "%d", (int) AguaTemporal);
+if (AguaTemporal !=  AguaIntens) {
+  AguaTemporal =  AguaIntens;
+  if (AguaTemporal < 500) HayAgua = false;
+  else HayAgua = true;
+}
+  CadaDosc = now;
+}
 
+if (now - CadaCinco > 5000) {
+    if (!(ReconectMosq) && !(ResetMosq) && !(Ejecutando)){
+      client.publish("Casandra/Huerta/Mosquito","Ejecutando");
+      Ejecutando = true;
+    }
 
-  } // Loop cada 30 segundos
+    if (ResetMosq) {
+      ResetMosq = false;
+      client.publish("Casandra/Huerta/Mosquito","Reset");
+    } else {
+      if (ReconectMosq) {
+        ReconectMosq = false;
+        client.publish("Casandra/Huerta/Mosquito","Reconect");
+     }
+    }
+    CadaCinco = now;
+}
 
   // Bloque de loop sin espera
 
+if (SegOn > 999) {
+  if (Estado) {
+    if ((!HayAgua)|| (AutoSegOn > MaxBbaOn)){
+      Estado = false;
+      sprintf(buffer, "%d", (int) (AutoSegOn + 1000));
+      client.publish("Casandra/Huerta/On", buffer);
+      Serial.println("       ...Se acabo el agua y se paso el valor 1000 mas segon");
+      Serial.print(AutoSegOn);
+      AutoSegOn = 0;
+    }
+  }
 }
+  
+  }

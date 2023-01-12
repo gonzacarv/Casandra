@@ -13,6 +13,7 @@
   ||                                                                                                      ||
   =========================================================================================================*/
 
+#include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <PubSubClient.h>
@@ -39,21 +40,30 @@ IRsend IRTVDeco(IRTele);
 
 const char* MosqID = "Mosquito-ESTAR";
 const char* mqtt_server = "192.168.0.100";
-String clientId = "Mosquito-ESTAR";
+String clientId;
+String ClienteID = "Mosquito-ESTAR";
 const char* Topico = "Casandra/Estar/#"; // Solo subscripto al topico de Galeria con comodin aguas abajo
-int ii = 0; // Contador de bus
-int buff[3]; // Lo que llega
+int ii = 0;    // Contador de bus
+int buff[3];   // Lo que llega
 int h1_old = 0;
 int t1_old = 0;
-float Rojo; // variable numerica intermedia float que graba los valores RGB
+float Rojo;    // variable numerica intermedia float que graba los valores RGB
 float Verde;
 float Azul;
-float dimer; // nivel del dimer
-int RojoDim; // variable numerica que graba los valores antes de pegarlos en el puero de salida
+float dimer;   // nivel del dimer
+int RojoDim;   // variable numerica que graba los valores antes de pegarlos en el puero de salida
 int VerdeDim;
 int AzulDim;
-unsigned long lastMsg = 0;
-int Trein = 0;
+int LEDMode;
+int VelociLED;
+int Dosis = 0;
+unsigned long Loop1 = 0;
+unsigned long Loop2 = 0;
+unsigned long Loop3 = 0;
+bool ResetMosq;      // True cuando se reinicia el mosquito
+bool ReconectMosq;   // True cuando se debe reconectar a MQTT
+bool Ejecutando = false;
+int CuentaErrorMQTT = 0;
 char Topicc[MSG_BUFFER_SIZE];
 char Argu[MSG_BUFFER_SIZE];
 bool RGBEstado;
@@ -119,7 +129,7 @@ void callback(char* topic, byte* payload, unsigned int length) { // Funcion de l
     else RGBOff();
   }
 
-  if ((!strcmp(UlTopic, "LuzEstado")) ){ 
+  if ((!strcmp(UlTopic, "LuzEstado")) ){
     //printf( "\n\n//////////// SET u OFF solo cuando el topic es LuzEstado ///////////\n");
     if (atoi(Pload) == 0) {
       RGBEstado = false;
@@ -129,6 +139,17 @@ void callback(char* topic, byte* payload, unsigned int length) { // Funcion de l
       RGBEstado = true;
       RGBSet();
     }
+  }
+
+  if (!strcmp(UlTopic, "ModoLED")) {
+    if (!strcmp(Pload, "Normal"))  LEDMode = 1;
+    if (!strcmp(Pload, "Ola RGB")) LEDMode = 2;
+    if (!strcmp(Pload, "Respira")) LEDMode = 3;
+    if (!strcmp(Pload, "Flash"))   LEDMode = 4;
+  }
+
+  if (!strcmp(UlTopic, "VelocidadLED")) {
+    VelociLED = atoi(Pload);
   }
 
     if (!strcmp(PenUlTopic, "CRemoto")){  /////////////////////////// Bloque de control IR TV y deco //////////////
@@ -148,6 +169,14 @@ void callback(char* topic, byte* payload, unsigned int length) { // Funcion de l
       if (!strcmp(UlTopic, "DecoBtn7")) IRTVDeco.sendNEC(0x101A05F, 32); 
       if (!strcmp(UlTopic, "DecoBtn8")) IRTVDeco.sendNEC(0x101A857, 32); 
       if (!strcmp(UlTopic, "DecoBtn9")) IRTVDeco.sendNEC(0x101B847, 32); // Verdadero boton "9" = 0x101B847
+      if (!strcmp(UlTopic, "DecoBtnOk"))    IRTVDeco.sendNEC(0x101F00F, 32); 
+      if (!strcmp(UlTopic, "DecoBtnUp"))    IRTVDeco.sendNEC(0x101609F, 32); 
+      if (!strcmp(UlTopic, "DecoBtnDw"))    IRTVDeco.sendNEC(0x101E01F, 32); 
+      if (!strcmp(UlTopic, "DecoBtnDe"))    IRTVDeco.sendNEC(0x101E817, 32); 
+      if (!strcmp(UlTopic, "DecoBtnIz"))    IRTVDeco.sendNEC(0x101708F, 32); 
+      if (!strcmp(UlTopic, "DecoBtnMute"))  IRTVDeco.sendNEC(0x10158A7, 32); 
+      if (!strcmp(UlTopic, "DecoBtnGuide")) IRTVDeco.sendNEC(0x1018877, 32); 
+      if (!strcmp(UlTopic, "DecoBtnExit"))  IRTVDeco.sendNEC(0x101E41B, 32);
     }
     if (!strcmp(PenUlTopic, "AA")){
       if (!strcmp(UlTopic, "Modo")){ //[“auto”, “off”, “cool”, “heat”, “dry”, “fan_only”]
@@ -232,52 +261,9 @@ void callback(char* topic, byte* payload, unsigned int length) { // Funcion de l
     }
   }
 
-void reconnect() {
-  int Reseteo = 0;
-  // Loopea hasta reconectar
-  while (!client.connected()) {
-    Serial.print("Intentando conectar a broker MQTT..");
-    // Create a random client ID
-    clientId += String(random(0xffff), HEX);
-    // Attempt to connect
-    if (client.connect(clientId.c_str(), "mqttuser", "MQTTpass")) {
-      Serial.println("¡Conectado! :D");
-      client.subscribe(Topico);
-    } else {
-      Serial.print("Falla de conexion, rc=");
-      Serial.print(client.state());
-      Serial.println(" intentando de nuevo en 5 segundos");
-      ++Reseteo;
-      if (Reseteo == 10) ESP.reset();
-      delay(5000);
-    }
-  }
-}
-
-void setup() {
-  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
-  Serial.begin(9600);
-  dht.begin();
-  delay(10);
-  AA.begin();
-  delay(10);
-  IRTVDeco.begin();
-  delay(10);
-  WiFiManager wm;
-  wm.setConfigPortalTimeout(180);
-  //wm.resetSettings();
-    bool res;
-    res = wm.autoConnect(MosqID); // password protected ap
-    if(!res) {
-        Serial.println("Error al conectar WiFi");
-        // ESP.restart();
-    } 
-    else {
-        //if you get here you have connected to the WiFi    
-        Serial.println("Conectado! ");
-    }
-
-   ArduinoOTA.setHostname(MosqID);
+void LaOTA(){
+  
+  ArduinoOTA.setHostname(MosqID);
   ArduinoOTA.onStart([]() {
     String type;
     if (ArduinoOTA.getCommand() == U_FLASH) {
@@ -285,8 +271,6 @@ void setup() {
     } else { // U_FS
       type = "filesystem";
     }
-
-    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
     Serial.println("Start updating " + type);
   });
   ArduinoOTA.onEnd([]() {
@@ -309,23 +293,87 @@ void setup() {
       Serial.println("End Failed");
     }
   });
+}
+
+void MQTTConect(){
+    ReconectMosq = true;
+    Ejecutando = false;
+    if (!client.connected()) {
+    Serial.print("Intentando conectar a broker MQTT..");
+    clientId = ClienteID + String(random(0xffff), HEX);
+    if (client.connect(clientId.c_str(), "mqttuser", "MQTTpass")) {
+      Serial.println("¡Conectado! :D");
+      client.subscribe(Topico);
+    } else {
+      Serial.print("Falla de conexion, rc=");
+      Serial.print(client.state());
+      Serial.println(" intentando de nuevo...");
+      ++CuentaErrorMQTT;
+      if (CuentaErrorMQTT > 100) ESP.reset();
+      }
+      delay(1000);
+    }
+  }
+
+void setup() {
+  Serial.begin(9600);
+  dht.begin();
+  delay(10);
+  AA.begin();
+  delay(10);
+  IRTVDeco.begin();
+  delay(10);
+  WiFiManager wifiManager;
+  ResetMosq = true; // Estamos iniciando desde un reset
+  Ejecutando = false;
+  
+  // Descomentar para resetear configuración
+  //wifiManager.resetSettings();
+
+  wifiManager.setConfigPortalTimeout(180);
+  if(!wifiManager.autoConnect("MosqID")){
+    Serial.println("Fallo en la conexión (timeout)");
+    ESP.reset();
+    delay(1000);
+  }
+  Serial.println("Conectado a WiFi");
+  Serial.println("IP: ");
+  Serial.println(WiFi.localIP());
+  LaOTA();
   ArduinoOTA.begin();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
 }
 
 void loop() {
-  ArduinoOTA.handle();
-  if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
 
-  unsigned long now = millis(); // ciclado cada 30 segundos
-  if (now - lastMsg > 1000) {
-    ++Trein;
-    if (Trein >= 31) Trein = 0;
-    lastMsg = now;
+ArduinoOTA.handle();
+client.loop();
+unsigned long now = millis(); 
+
+if (now - Loop1 > 5000) {
+    if (!(ReconectMosq) && !(ResetMosq) && !(Ejecutando)){
+      client.publish("Casandra/Estar/Mosquito","Ejecutando");
+      Ejecutando = true;
+    }
+
+    if (ResetMosq) {
+      ResetMosq = false;
+      client.publish("Casandra/Estar/Mosquito","Reset");
+    } else {
+      if (ReconectMosq) {
+        ReconectMosq = false;
+        client.publish("Casandra/Estar/Mosquito","Reconect");
+     }
+    }
+    Loop1 = now;
+}
+
+  if (now - Loop2 > 1000) {
+    if (!client.loop()) MQTTConect();
+    ++Dosis;
+    if (Dosis > 30) Dosis = 0;
+
     char buffer[4];
     int h1 = (int) dht.readHumidity();   // Leemos la humedad
     if ((h1 != h1_old) && (h1 < 100) && (h1 > 0)) {
@@ -333,23 +381,24 @@ void loop() {
       sprintf(buffer, "%d", h1);
       client.publish("Casandra/Estar/Humedad", buffer);
     }
+    
     int t1 = (int) dht.readTemperature(); // Leemos la temperatura
     if ((t1 != t1_old) && (t1 < 50) && (t1 > 0)) {
       t1_old = t1;
       sprintf(buffer, "%d", t1);
       client.publish("Casandra/Estar/Temperatura", buffer);
     }
-    //publicamos ambos datos
-    if (Trein == 5) {
+    
+    if (Dosis == 15) {
       sprintf(buffer, "%d", h1_old);
       client.publish("Casandra/Estar/Humedad", buffer);
     }
-    if (Trein == 20) {
+    if (Dosis == 30) {
       sprintf(buffer, "%d", t1_old);
       client.publish("Casandra/Estar/Temperatura", buffer);
     }
-
-  } // Loop cada 30 segundos
+    Loop2 = now;
+  }
 
   // Bloque de loop sin espera
 
