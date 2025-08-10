@@ -1,0 +1,26 @@
+These are they currrently working mods for this version no multiplayer yet
+
+Just install and start the game premodded apk
+
+BeatLeader.qmod
+BetterSongSearch.qmod
+BSML.qmod
+ClockMod.qmod
+CustomTypes.qmod
+DlcSorter.qmod
+FasterScroll.qmod
+GaySabers.qmod
+GraphicsTweaks.qmod
+Haptic.Revert.qmod
+OculusDB_CoreMods.qmod
+PlayerDataKeeper.qmod
+PlaylistCore.qmod
+PlaylistDownloader.qmod
+QosmeticsBoxes.qmod
+QosmeticsCyoobs.qmod
+QosmeticsWhackers.qmod
+RandomSongPicker_1_35_0.qmod
+RecentlyPlayed_1_35_0.qmod
+SmoothedController.qmod
+SongCore.qmod
+SongDownloader.qmod

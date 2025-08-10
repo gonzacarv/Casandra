@@ -21,12 +21,11 @@
 #include <ArduinoOTA.h>
 #include <string>
 
-#define LuzEntrada 5         // Rele de la luz de entrada D1 --
-#define LEDMesada 4          // Salida PWM para LED D2 --
-//#define TeclaEntrada 12      // SW de la luz de entrada D6 
+#define LuzEntrada 5          // Rele de la luz de entrada D1 --
+#define LEDMesada 4           // Salida PWM para LED D2 --
 #define TeclaLED1 14          // SW LED1 D5 
-#define TeclaLED2 13         // SW LED2 D6
-#define TeclaPorton 12       // Pulsador porton D7
+#define TeclaLED2 12          // SW LED2 D6
+#define TeclaPorton 13        // Pulsador porton D7
 #define MSG_BUFFER_SIZE  (50)
 
 const char* MosqID = "Mosquito-COCINABIS";
@@ -40,19 +39,25 @@ bool EstadoTeclaLED1;
 bool EstadoTeclaLED2;
 bool LuzEntradaEstado;
 bool LEDMesadaEstado;
+bool LEDMesadaEstado_old;
 float LEDMesadaIntensidad; 
+int LEDMesadaIntReal; 
 int LEDMode;
 int VelociLED;
+float Respiracion = 0;
+int DimReal;
+bool Flashh;
 bool ResetMosq = true;      // True cuando se reinicia el mosquito
 bool ReconectMosq = true;   // True cuando se debe reconectar a MQTT
 bool Ejecutando = false;
-//float dimer; // nivel del dimer
+float dimer; // nivel del dimer
 unsigned long Loop1 = 0;
 unsigned long Loop2 = 0;
 unsigned long Loop3 = 0;
-
-int testeo = 0;
-
+unsigned long LoopNormal = 0;
+unsigned long LoopRespira = 0;
+unsigned long LoopFlash = 0;
+unsigned long now; 
 char Topicc[MSG_BUFFER_SIZE];
 char Argu[MSG_BUFFER_SIZE];
 
@@ -61,25 +66,80 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 void LEDSet(void){
-    analogWrite(LEDMesada, (int) (255 - LEDMesadaIntensidad));
-    Serial.println("........Estamos en LEDOn con una intensidad de: ");
-    Serial.println((255 - LEDMesadaIntensidad));
-}
 
-void LEDOff(void){
-    analogWrite(LEDMesada, 255);
-    Serial.println("........Estamos en LEDOff escribiendo un 255 analogico");
+  switch(LEDMode){
+    case 1: // Modo normal
+    if (LEDMesadaEstado) {
+      if ((now - LoopNormal) > 4) { // 
+      LoopNormal = now;
+      if (LEDMesadaIntReal < DimReal) --DimReal;
+      if (LEDMesadaIntReal > DimReal) ++DimReal;
+      analogWrite(LEDMesada, (int) (255 - DimReal));
+      }
+    } else analogWrite(LEDMesada, 255);
+      //
+      break;
+
+    case 2: // Modo Respira
+
+    if (LEDMesadaEstado) {
+      if ((now - LoopRespira) > (VelociLED*2)) { // 
+        
+        LoopRespira = now;
+        ++Respiracion;
+        if (Respiracion >= 160) Respiracion = 0;
+
+        if (Respiracion < 60){
+          int var = (255 * dimer) * (Respiracion / 60);
+          analogWrite(LEDMesada, var);
+        }
+        if ((Respiracion >= 60) && (Respiracion < 100)){
+          analogWrite(LEDMesada, 255);
+      }
+        
+        if ((Respiracion >= 100) && (Respiracion < 160)){
+          int var = (255 * dimer) * (1 - ((Respiracion - 100) / 60));
+          analogWrite(LEDMesada, var);
+      }
+
+      }
+    } else analogWrite(LEDMesada, 255);
+      
+      //
+      break;
+    
+    case 3: // Modo Flash
+
+    if (LEDMesadaEstado) {
+      if (now - LoopFlash > (VelociLED*10)) { // 
+        LoopFlash = now;
+        if (Flashh) {
+          analogWrite(LEDMesada, (int) (255 - LEDMesadaIntensidad));
+          Flashh = false;
+        } else {
+            analogWrite(LEDMesada, 255);
+            Flashh = true;
+          }
+      }
+    } else analogWrite(LEDMesada, 255);
+      
+      //
+      break;
+
+    default: // Modo normal si nada coincide
+      LEDMode = 1;      
+      //
+      break;
+  } //switch
+
 }
 
 void LEDToggle(void){
-    if (LEDMesadaEstado) { 
+    if (LEDMesadaEstado) {
       LEDMesadaEstado = false; 
-      LEDOff(); 
       client.publish("Casandra/CocinaBis/LEDMesadaEst","0");
-      }
-    if (!LEDMesadaEstado) {
+      } else {
       LEDMesadaEstado = true;
-      LEDSet();
       client.publish("Casandra/CocinaBis/LEDMesadaEst","1");
       }
     }
@@ -89,7 +149,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   char *UlTopic;
   char *PenUlTopic;
   char *Fin;
-  char Pload[6];
+  char Pload[10];
 
   memcpy(Pload, payload, length);
   Pload[length] = '\0';
@@ -105,40 +165,39 @@ void callback(char* topic, byte* payload, unsigned int length) {
     if (atoi(Pload) == 0) {
       LuzEntradaEstado = false;
       digitalWrite(LuzEntrada,LOW);
-          Serial.println("........Se acaba de poner LOW la salida LuzEntrada. ");
-
     } else {
       LuzEntradaEstado = true;
       digitalWrite(LuzEntrada,HIGH);
-          Serial.println("........Se acaba de poner HIGH la salida LuzEntrada. ");
-  }
+     }
   }
   
   if (!strcmp(UlTopic, "LEDMesadaEst")) {
     if (atoi(Pload) == 0) {
       LEDMesadaEstado = false;
-      LEDOff();
     } else {
      LEDMesadaEstado = true;
-     LEDSet();
   }
   }
   
   if (!strcmp(UlTopic, "LEDMesadaInt")) {
+    dimer = (atof(Pload) / 100); 
     LEDMesadaIntensidad = ((255 * atof(Pload)) / 100);
-    if (LEDMesadaEstado) LEDSet();
-    else LEDOff();
+    LEDMesadaIntReal = LEDMesadaIntensidad;
   }
   
   if (!strcmp(UlTopic, "ModoLED")) {
-    if (!strcmp(Pload, "Normal"))  LEDMode = 1;
+    if (!strcmp(Pload, "Normal")) LEDMode = 1;
+    }
+
+  if (!strcmp(UlTopic, "ModoLED")) {
     if (!strcmp(Pload, "Respira")) LEDMode = 2;
-    if (!strcmp(Pload, "Flash"))   LEDMode = 3;
-  }
-  
-  if (!strcmp(UlTopic, "VelocidadLED")) {
-    VelociLED = atoi(Pload);
-  }
+    }
+
+  if (!strcmp(UlTopic, "ModoLED")) {
+    if (!strcmp(Pload, "Flash")) LEDMode = 3;
+    }
+
+  if (!strcmp(UlTopic, "VelocidadLED")) VelociLED = (100 - atoi(Pload));
 }
 
 void LaOTA(){
@@ -221,13 +280,18 @@ void setup() {
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
   LuzEntradaEstado = false;
+
+  LEDMesadaEstado = false;
+  LEDMesadaIntensidad = 255; 
+  LEDMode = 1;
+  VelociLED = 50;
 }
 
 void loop() {
 
 ArduinoOTA.handle();
 client.loop();
-unsigned long now = millis(); 
+now = millis(); 
 
   if (now - Loop1 > 5000) { // 5 segundos
     Loop1 = now;
@@ -255,8 +319,13 @@ unsigned long now = millis();
   if (now - Loop3 > 50) {
     Loop3 = now;
     if (digitalRead(TeclaPorton)!= EstadoTeclaPorton) {
-      if (digitalRead(TeclaPorton)) client.publish("Casandra/CocinaBis/SWPorton","1");
-      else client.publish("Casandra/CocinaBis/SWPorton","0");
+      if (digitalRead(TeclaPorton)) {
+        client.publish("Casandra/CocinaBis/SWPorton","1");
+        Serial.println("........Prendimos Sw Porton");
+      } else {
+        client.publish("Casandra/CocinaBis/SWPorton","0");
+        Serial.println("........Apagamos Sw Porton");
+      }
       EstadoTeclaPorton = digitalRead(TeclaPorton);
     }
 
@@ -269,9 +338,22 @@ unsigned long now = millis();
       LEDToggle();
       EstadoTeclaLED2 = digitalRead(TeclaLED2);
     }
-  }
+
+   if (LEDMesadaEstado != LEDMesadaEstado_old){
+    if (LEDMode == 1) {
+      if (LEDMesadaEstado) {
+        LEDMesadaIntReal = LEDMesadaIntensidad;
+      } else {
+          LEDMesadaIntReal = 255;
+        }
+      LEDMesadaEstado_old = LEDMesadaEstado;
+    }
+}
+}
 
 
+
+LEDSet();
 //Bloque de loop sin espera
 
 }

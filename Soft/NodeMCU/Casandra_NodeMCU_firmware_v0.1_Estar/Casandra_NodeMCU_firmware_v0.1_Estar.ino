@@ -55,36 +55,176 @@ int RojoDim;   // variable numerica que graba los valores antes de pegarlos en e
 int VerdeDim;
 int AzulDim;
 int LEDMode;
-int VelociLED;
+int VelociLED = 30;
 int Dosis = 0;
 unsigned long Loop1 = 0;
 unsigned long Loop2 = 0;
-unsigned long Loop3 = 0;
+unsigned long LoopFlash = 0;
+unsigned long LoopLluvia = 0;
+float CuentaOla = 0;
+bool Flashh;
 bool ResetMosq;      // True cuando se reinicia el mosquito
 bool ReconectMosq;   // True cuando se debe reconectar a MQTT
 bool Ejecutando = false;
 int CuentaErrorMQTT = 0;
 char Topicc[MSG_BUFFER_SIZE];
 char Argu[MSG_BUFFER_SIZE];
+unsigned long now;
 bool RGBEstado;
 DHT dht(DHTPIN, DHT22);
 WiFiClient espClient;
 PubSubClient client(espClient);
 
 void RGBSet(void){
-    RojoDim = dimer * Rojo;
-    VerdeDim = dimer * Verde;
-    AzulDim = dimer * Azul;
-    analogWrite(RR, RojoDim);
-    analogWrite(GG, VerdeDim);
-    analogWrite(BB, AzulDim);
+  if (RGBEstado) {
+    switch(LEDMode){
+      case 1: // Modo normal
+        RojoDim = dimer * Rojo;
+        VerdeDim = dimer * Verde;
+        AzulDim = dimer * Azul;
+        RGBOn(RojoDim, VerdeDim, AzulDim);
+        //
+      break;
+
+      case 2: // Modo OlaRGB
+       if (now - LoopFlash > (VelociLED*2)) { // 
+        
+        LoopFlash = now;
+        ++CuentaOla;
+        if (CuentaOla >= 360) CuentaOla = 0;
+        
+        if ((CuentaOla >= 0) && (CuentaOla < 60)){
+          RojoDim = dimer * 255;
+          VerdeDim = dimer * (4.25 * CuentaOla);
+          AzulDim = 0;
+        }
+        if ((CuentaOla >= 60) && (CuentaOla < 120)){
+          RojoDim = dimer * (4.25 * (60 - (CuentaOla - 60)));
+          VerdeDim = dimer * 255;
+          AzulDim = 0;
+        }
+        if ((CuentaOla >= 120) && (CuentaOla < 180)){
+          RojoDim = 0;
+          VerdeDim = dimer * 255;
+          AzulDim = dimer * (4.25 * (CuentaOla - 120));
+        }
+        if ((CuentaOla >= 180) && (CuentaOla < 240)){
+          RojoDim = 0;
+          VerdeDim = dimer * (4.25 * (60 - (CuentaOla - 180)));
+          AzulDim = dimer * 255;
+        }
+        if ((CuentaOla >= 240) && (CuentaOla < 300)){
+          RojoDim = dimer * (4.25 * (CuentaOla - 240));
+          VerdeDim = 0;
+          AzulDim = dimer * 255;
+        }
+        if ((CuentaOla >= 300) && (CuentaOla < 360)){
+          RojoDim = dimer * 255;
+          VerdeDim = 0;
+          AzulDim = dimer * (4.25 * (60 - (CuentaOla - 300)));
+        }
+        RGBOn(RojoDim, VerdeDim, AzulDim);
+      }
+        //
+      break;
+
+      case 3: // Modo FlashRGB
+  
+      if (now - LoopFlash > (VelociLED*3)) { // 
+        LoopFlash = now;
+        if (Flashh) {
+          RojoDim = dimer * (random(2)*255);
+          VerdeDim = dimer * (random(2)*255);
+          AzulDim = dimer * (random(2)*255);
+          if ((RojoDim == 0) && (VerdeDim == 0) && (AzulDim == 0)) {RojoDim = (dimer * 255);VerdeDim = (dimer * 255);AzulDim = (dimer * 255);}
+          RGBOn(RojoDim, VerdeDim, AzulDim);
+          Flashh = false;
+        } else {
+            RGBOff();
+            Flashh = true;
+          }
+      }
+
+        //
+      break;
+
+      case 4: // Modo LluviaRGB
+  
+      if (now - LoopLluvia > (VelociLED*6)) { // 
+        LoopLluvia = now;
+          RojoDim = dimer * random(255);
+          VerdeDim = dimer * random(255);
+          AzulDim = dimer * random(255);
+          if ((RojoDim == 0) && (VerdeDim == 0) && (AzulDim == 0)) {RojoDim = (dimer * 255);VerdeDim = (dimer * 255);AzulDim = (dimer * 255);}
+          RGBOn(RojoDim, VerdeDim, AzulDim);
+          Flashh = false;
+      }
+
+        //
+      break;
+
+      case 5: // Modo Respira
+       if (now - LoopFlash > (VelociLED*2)) { // 
+        
+        LoopFlash = now;
+        ++CuentaOla;
+        if (CuentaOla >= 120) CuentaOla = 0;
+        
+        if (CuentaOla < 60){
+          RojoDim = dimer * Rojo * (CuentaOla / 60);
+          VerdeDim = dimer * Verde * (CuentaOla / 60);
+          AzulDim = dimer * Azul * (CuentaOla / 60);
+        }
+        if ((CuentaOla >= 60) && (CuentaOla < 120)){
+          RojoDim = dimer * Rojo * (1 - ((CuentaOla - 60) / 60));
+          VerdeDim = dimer * Verde * (1 - ((CuentaOla - 60) / 60));
+          AzulDim = dimer * Azul * (1 - ((CuentaOla - 60) / 60));
+        }
+        RGBOn(RojoDim, VerdeDim, AzulDim);
+      }
+  
+        //
+      break;
+
+      case 6: // Modo Flash
+
+      if (now - LoopFlash > (VelociLED*3)) { // 
+        LoopFlash = now;
+        if (Flashh) {
+          RojoDim = dimer * Rojo;
+          VerdeDim = dimer * Verde;
+          AzulDim = dimer * Azul;
+          RGBOn(RojoDim, VerdeDim, AzulDim);
+          Flashh = false;
+        } else {
+            RGBOff();
+            Flashh = true;
+          }
+      }
+
+        //
+      break;
+
+      default: //
+        LEDMode = 1;  
+        //
+      break;
+    }
+  } else {
+      RGBOff();
+    }
 }
 
-void RGBOff(void){
-    //printf( "//////////// RGB OFF ///////////\n\n");
-    analogWrite(RR, 0);
-    analogWrite(GG, 0);
-    analogWrite(BB, 0);
+void RGBOn(int ERE, int GE, int BE) {
+  analogWrite(RR, ERE);
+  analogWrite(GG, GE);
+  analogWrite(BB, BE);    
+}
+
+void RGBOff() {
+  analogWrite(RR, 0);
+  analogWrite(GG, 0);
+  analogWrite(BB, 0);
 }
 
 void callback(char* topic, byte* payload, unsigned int length) { // Funcion de lectura de lo que va llegando al topico que escuchamos
@@ -104,7 +244,7 @@ void callback(char* topic, byte* payload, unsigned int length) { // Funcion de l
     Fin = strtok(NULL, s);
   }
 
-  if ( (!strcmp(PenUlTopic, "Estar")) && (!strcmp(UlTopic, "LuzRGB")) ) { // funcion que extrae los colores RGB del la luz
+  if ( (!strcmp(PenUlTopic, "Estar")) && (!strcmp(UlTopic, "LuzRGB")) ) { ////////// funcion que recibe extrae los colores RGB del la luz
     const char separador[2] = ",";
     char *RGBs;
     RGBs = strtok(Pload, separador);
@@ -117,40 +257,35 @@ void callback(char* topic, byte* payload, unsigned int length) { // Funcion de l
       if (cuentaRGB == 3) cuentaRGB = 0;
       RGBs = strtok(NULL, separador);
     }
-    //printf( "\n\n//////////// SET solo cuando el topic es LuzRGB ///////////\n");
-    if (RGBEstado) RGBSet();
-    else RGBOff();
-  }
+  } /////////////
 
   if (!strcmp(UlTopic, "LuzIntensidad")) {
     dimer = (atof(Pload) / 100);
     //printf( "\n\n//////////// SET solo cuando el topic es LuzIntensidad ///////////\n");
-    if (RGBEstado) RGBSet();
-    else RGBOff();
-  }
+  } /////////////
 
   if ((!strcmp(UlTopic, "LuzEstado")) ){
     //printf( "\n\n//////////// SET u OFF solo cuando el topic es LuzEstado ///////////\n");
     if (atoi(Pload) == 0) {
       RGBEstado = false;
-      RGBOff();
     }
     if (atoi(Pload) == 1) {
       RGBEstado = true;
-      RGBSet();
     }
-  }
+  } /////////////
 
   if (!strcmp(UlTopic, "ModoLED")) {
-    if (!strcmp(Pload, "Normal"))  LEDMode = 1;
-    if (!strcmp(Pload, "Ola RGB")) LEDMode = 2;
-    if (!strcmp(Pload, "Respira")) LEDMode = 3;
-    if (!strcmp(Pload, "Flash"))   LEDMode = 4;
-  }
+    if (!strcmp(Pload, "Normal"))    LEDMode = 1;
+    if (!strcmp(Pload, "OlaRGB"))    LEDMode = 2;
+    if (!strcmp(Pload, "FlashRGB"))  LEDMode = 3;
+    if (!strcmp(Pload, "LluviaRGB")) LEDMode = 4;
+    if (!strcmp(Pload, "Respira"))   LEDMode = 5;
+    if (!strcmp(Pload, "Flash"))     LEDMode = 6;
+  } /////////////
 
   if (!strcmp(UlTopic, "VelocidadLED")) {
-    VelociLED = atoi(Pload);
-  }
+    VelociLED = (100 - atoi(Pload));
+  } /////////////
 
     if (!strcmp(PenUlTopic, "CRemoto")){  /////////////////////////// Bloque de control IR TV y deco //////////////
       if (!strcmp(UlTopic, "BtnOnTV"))        IRTVDeco.sendNEC(0x20DF10EF, 32); 
@@ -177,7 +312,8 @@ void callback(char* topic, byte* payload, unsigned int length) { // Funcion de l
       if (!strcmp(UlTopic, "DecoBtnMute"))  IRTVDeco.sendNEC(0x10158A7, 32); 
       if (!strcmp(UlTopic, "DecoBtnGuide")) IRTVDeco.sendNEC(0x1018877, 32); 
       if (!strcmp(UlTopic, "DecoBtnExit"))  IRTVDeco.sendNEC(0x101E41B, 32);
-    }
+    } /////////////
+    
     if (!strcmp(PenUlTopic, "AA")){
       if (!strcmp(UlTopic, "Modo")){ //[“auto”, “off”, “cool”, “heat”, “dry”, “fan_only”]
         if (!strcmp(Pload, "auto")) {
@@ -258,7 +394,7 @@ void callback(char* topic, byte* payload, unsigned int length) { // Funcion de l
         Serial.println("\n");
         // decodificamos la temperatura objetivo
       }
-    }
+    }/////////////
   }
 
 void LaOTA(){
@@ -349,7 +485,7 @@ void loop() {
 
 ArduinoOTA.handle();
 client.loop();
-unsigned long now = millis(); 
+now = millis(); 
 
 if (now - Loop1 > 5000) {
     if (!(ReconectMosq) && !(ResetMosq) && !(Ejecutando)){
@@ -400,6 +536,7 @@ if (now - Loop1 > 5000) {
     Loop2 = now;
   }
 
-  // Bloque de loop sin espera
+RGBSet();
 
+  // Bloque de loop sin espera
 }

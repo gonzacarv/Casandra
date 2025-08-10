@@ -1,0 +1,3 @@
+Download and Install with Rookie.
+
+Fix should be auto applied for you and should now work on both normal and multi install versions

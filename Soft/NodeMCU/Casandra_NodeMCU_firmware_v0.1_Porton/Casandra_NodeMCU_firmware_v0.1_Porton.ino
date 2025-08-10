@@ -24,7 +24,7 @@
 
 #define SwAbrir    05   // Switch abrir porton D1
 #define SwCerrar   04   // Switch cerrar porton D2
-#define LuzCamino  00   // Luz camino D3
+#define LuzCamino  16   // Luz camino D0
 #define Timbre     14   // Timbre D5
 #define SensPuerta 12   // Sensor Puerta D6
 #define SensPorton 13   // Sensor Porton D7

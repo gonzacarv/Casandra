@@ -21,7 +21,6 @@
 #include <ArduinoOTA.h>
 #include <string>
 #include "DHT.h"
-
 #define DHT1PIN D2  // D2
 #define DHTTYPE DHT22
 #define MSG_BUFFER_SIZE  (50)
@@ -29,12 +28,19 @@
 bool debu = false;
 const char* MosqID = "Mosquito-GALERIA";
 const char* mqtt_server = "192.168.0.100";
-String clientId = "Mosquito-GALERIA";
+String ClienteID = "Mosquito-GALERIA";
+String clientId;
 const char* Topico = "Casandra/Galeria/#"; // Solo subscripto al topico de Galeria con comodin aguas abajo
 int ii = 0; // Contador de bus
 int buff[3]; // Lo que llega
 int h1_old = 0;
 int t1_old = 0;
+bool ResetMosq = true;      // True cuando se reinicia el mosquito
+bool ReconectMosq = true;   // True cuando se debe reconectar a MQTT
+bool Ejecutando = false;
+int CuentaErrorMQTT = 0;
+bool ResetModulo1;          // True cuando se resetea el modulo PIC
+
 unsigned long lastMsg = 0;
 int Trein = 0;
 char Topicc[MSG_BUFFER_SIZE];
@@ -73,6 +79,60 @@ void callback(char* topic, byte* payload, unsigned int length) {
   //}
 }
 
+void LaOTA(){
+  
+  ArduinoOTA.setHostname(MosqID);
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH) {
+      type = "sketch";
+    } else { // U_FS
+      type = "filesystem";
+    }
+    Serial.println("Start updating " + type);
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nEnd");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) {
+      Serial.println("Auth Failed");
+    } else if (error == OTA_BEGIN_ERROR) {
+      Serial.println("Begin Failed");
+    } else if (error == OTA_CONNECT_ERROR) {
+      Serial.println("Connect Failed");
+    } else if (error == OTA_RECEIVE_ERROR) {
+      Serial.println("Receive Failed");
+    } else if (error == OTA_END_ERROR) {
+      Serial.println("End Failed");
+    }
+  });
+}
+
+void MQTTConect(){
+    ReconectMosq = true;
+    Ejecutando = false;
+    if (!client.connected()) {
+    Serial.print("Intentando conectar a broker MQTT..");
+    clientId = ClienteID + String(random(0xffff), HEX);
+    if (client.connect(clientId.c_str(), "mqttuser", "MQTTpass")) {
+      Serial.println("¡Conectado! :D");
+      client.subscribe(Topico);
+    } else {
+      Serial.print("Falla de conexion, rc=");
+      Serial.print(client.state());
+      Serial.println(" intentando de nuevo...");
+      ++CuentaErrorMQTT;
+      if (CuentaErrorMQTT > 100) ESP.reset();
+      }
+      delay(1000);
+    }
+  }
+
 /////////////////////////// Funcion que habla en el bus ////////////////////////////////////////
 void Hablador(int x, int y) { // La funcion encargada de hablar en el bus
   Serial.write(250);
@@ -81,80 +141,29 @@ void Hablador(int x, int y) { // La funcion encargada de hablar en el bus
   Serial.write(x + y);
   delay(25);
 }
-void reconnect() {
-  int Reseteo = 0;
-  // Loopea hasta reconectar
-  while (!client.connected()) {
-    if (debu) Serial.print("Intentando conectar a broker MQTT..");
-    // Create a random client ID
-    clientId += String(random(0xffff), HEX);
-    // Attempt to connect
-    if (client.connect(clientId.c_str(), "mqttuser", "MQTTpass")) {
-      if (debu) Serial.println("¡Conectado! :D");
-      client.subscribe(Topico);
-    } else {
-      if (debu) Serial.print("Falla de conexion, rc=");
-      if (debu) Serial.print(client.state());
-      if (debu) Serial.println(" intentando de nuevo en 5 segundos");
-      ++Reseteo;
-      if (Reseteo == 10) ESP.reset();
-      delay(5000);
-    }
-  }
-}
+
 
 void setup() {
-  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
   Serial.begin(2400);
   dht1.begin();
   delay(10);
-  WiFiManager wm;
-  wm.setConfigPortalTimeout(180);
-  Serial.begin(2400);
-  //wm.resetSettings();
-    bool res;
-    res = wm.autoConnect(MosqID); // password protected ap
-    if(!res) {
-        if (debu) Serial.println("Error al conectar WiFi");
-        // ESP.restart();
-    } 
-    else {
-        //if you get here you have connected to the WiFi    
-        if (debu) Serial.println("Conectado! ");
-    }
-
-   ArduinoOTA.setHostname(MosqID);
-  ArduinoOTA.onStart([]() {
-    String type;
-    if (ArduinoOTA.getCommand() == U_FLASH) {
-      type = "sketch";
-    } else { // U_FS
-      type = "filesystem";
-    }
-
-    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
-    if (debu) Serial.println("Start updating " + type);
-  });
-  ArduinoOTA.onEnd([]() {
-    if (debu) Serial.println("\nEnd");
-  });
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    if (debu) Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
-    if (debu) Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) {
-      if (debu) Serial.println("Auth Failed");
-    } else if (error == OTA_BEGIN_ERROR) {
-      if (debu) Serial.println("Begin Failed");
-    } else if (error == OTA_CONNECT_ERROR) {
-      if (debu) Serial.println("Connect Failed");
-    } else if (error == OTA_RECEIVE_ERROR) {
-      if (debu) Serial.println("Receive Failed");
-    } else if (error == OTA_END_ERROR) {
-      if (debu) Serial.println("End Failed");
-    }
-  });
+  WiFiManager wifiManager;
+  ResetMosq = true; // Estamos iniciando desde un reset
+  Ejecutando = false;
+  
+  // Descomentar para resetear configuración
+  //wifiManager.resetSettings();
+  
+  wifiManager.setConfigPortalTimeout(180);
+  if(!wifiManager.autoConnect("MosqID")){
+    Serial.println("Fallo en la conexión (timeout)");
+    ESP.reset();
+    delay(1000);
+  }
+  Serial.println("Conectado a WiFi");
+  Serial.println("IP: ");
+  Serial.println(WiFi.localIP());
+  LaOTA();
   ArduinoOTA.begin();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
@@ -166,8 +175,31 @@ void setup() {
 
 void loop() {
   ArduinoOTA.handle();
+  client.loop();
   if (!client.connected()) {
-    reconnect();
+
+  while (Serial.available() > 0) {
+    buff[ii] = Serial.read();
+    if (buff[ii] == 250) ii = 0;
+    else ++ii;
+    if (ii == 3) {
+      if (( (buff[0]) + (buff[1]) ) == buff[2]) { // Prueba de checksum
+        if (buff[0] == 184) {
+          if (buff[1] == 53) {
+            ResetModulo1 = true;
+            client.unsubscribe(Topico);
+            //client.publish("Casandra/Galeria/Modulo/1","off");
+          }
+          if (buff[1] == 54) {
+            //ResetModulo2 = true;
+            //client.publish("Casandra/Galeria/Modulo/2","off");
+          }
+        } 
+      } // Prueba de Checksum
+      ii = 0;
+    } // Cuando el contador llega a 3
+  } // Cuando llego algo al buffer
+    MQTTConect();
   }
   client.loop();
 
@@ -202,9 +234,38 @@ void loop() {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   unsigned long now = millis(); // ciclado cada 30 segundos
   if (now - lastMsg > 1000) {
+    if (!client.loop()) MQTTConect();
     ++Trein;
     if (Trein >= 31) Trein = 0;
-    if (Trein == 15) client.publish("Casandra/Galeria/Modulo/1","on");
+    if (Trein == 15) {
+      if (ResetModulo1) {
+        ResetModulo1 = false;
+        client.subscribe(Topico);
+        client.publish("Casandra/Galeria/Modulo/1","off");
+      } else client.publish("Casandra/Galeria/Modulo/1","on");
+    }    
+
+    if (Trein == 5) {
+     if (ResetMosq) {
+      ResetMosq = false;
+      client.publish("Casandra/Galeria/Mosquito","Reset");
+     }
+    }
+
+    if (Trein == 10) {
+     if (ReconectMosq) {
+      ReconectMosq = false;
+      client.publish("Casandra/Galeria/Mosquito","Reconect");
+     }
+    }
+
+    if (Trein == 27) {
+     if (!(ReconectMosq) && !(ResetMosq)){
+      client.publish("Casandra/Galeria/Mosquito","Ejecutando");
+     }
+    }
+
+
     lastMsg = now;
     char buffer[4];
     int h1 = (int) dht1.readHumidity();   // Leemos la humedad

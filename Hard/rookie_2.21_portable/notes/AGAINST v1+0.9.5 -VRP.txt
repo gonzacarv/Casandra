@@ -1,0 +1,4 @@
+Can be laggy. Head movements cause graphic jumping.
+
+These issues are due to the game being incomplete.
+The standalone version was abandoned by the developer years ago.
