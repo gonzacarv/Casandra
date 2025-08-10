@@ -1,4 +1,0 @@
-v499 must be a Clean-Install, not updated.
-You MUST follow the Wiki Instructions to Install this Game!
-
-https://vrpirates.wiki/en/games/premium-bowling
